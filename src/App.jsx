@@ -15,6 +15,7 @@ import {
 import HomePage from './components/HomePage';
 import CounterPage from './components/CounterPage';
 import Counter2Page from './components/Counter2Page';
+import DashboardPage from './components/DashboardPage';
 // Root route component
 function RootComponent() {
   return (
@@ -52,13 +53,13 @@ function RootComponent() {
                 >
                   Counter2
                 </Link>
-                {/* <Link 
-                  to="/posts" 
+                <Link 
+                  to="/dashboard" 
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                   activeProps={{ className: "text-blue-600 bg-blue-50" }}
                 >
-                  Posts
-                </Link> */}
+                  Dashboard
+                </Link>
               </div>
             </div>
           </div>
@@ -96,12 +97,19 @@ const usersRoute = createRoute({
   component: Counter2Page,
 });
 
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard',
+  component: DashboardPage,
+});
+
 
 // Create route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
   aboutRoute,
   usersRoute,
+  dashboardRoute
 ]);
 
 // Create router

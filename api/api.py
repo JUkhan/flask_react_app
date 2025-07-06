@@ -8,6 +8,19 @@ import base64
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 import utils
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# db_params = {
+#         'host': os.environ.get('HOST'),
+#         'database': os.environ.get('DATABASE'),
+#         'user': os.environ.get('USER'),
+#         'password': os.environ.get('PASSWORD'),
+#         'port': int(os.environ.get('DATABASE_PORT'))
+#     }
+# initialize_connection_pool(db_params, min_connections=2, max_connections=10)
+schema_name = os.environ.get('SCHEMA_NAME')
 
 app = Flask(__name__)
 
@@ -16,8 +29,7 @@ UPLOAD_FOLDER = 'static'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
-if not os.environ.get("GOOGLE_API_KEY"):
-  os.environ["GOOGLE_API_KEY"] = "Your-api-key"
+
 # Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -98,7 +110,12 @@ Return: array<Recipe>
             }
         ]
     )
-    llm = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
+    llm = init_chat_model(
+        model="gemini-2.0-flash", 
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        temperature=0.7, 
+        model_provider="google_genai"
+    )
     response = llm.invoke([message])
     success, data, err =utils.extract_json(response.content)
     return data, 200
@@ -115,3 +132,4 @@ def stream():
 def get_current_time():
     import time
     return {'time': time.time()}
+

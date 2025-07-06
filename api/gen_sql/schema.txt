@@ -1,0 +1,82 @@
+Table: Charge
+        id (INTEGER, Primary Key)
+        amount (TEXT)
+        cost (DOUBLE PRECISION)
+
+Table: Faq
+        id (INTEGER, Primary Key)
+        who (TEXT)
+        what (TEXT)
+
+Table: PaymentInstruction
+        id (INTEGER, Primary Key)
+        statement (CHARACTER VARYING(2000))
+
+Table: Service
+        id (INTEGER, Primary Key)
+        name (TEXT)
+        type (TEXT)
+        description (TEXT)
+        contact (TEXT)
+        city (TEXT)
+        address (TEXT)
+        mediaLink (TEXT)
+
+Table: Transaction
+        id (INTEGER, Primary Key)
+        senderName (TEXT)
+        senderPhone (TEXT)
+        senderEmail (TEXT)
+        recipientName (TEXT)
+        recipientPhone (TEXT)
+        recipientEmail (TEXT)
+        recipientCity (TEXT)
+        amount (DOUBLE PRECISION)
+        availableAmount (DOUBLE PRECISION)
+        code (TEXT)
+        status (TEXT)
+        paymentMethod (TEXT)
+        statement (CHARACTER VARYING(1000))
+        serviceId (INTEGER)
+        referenceNo (TEXT)
+        createdAt (TIMESTAMP WITHOUT TIME ZONE)
+        updatedAt (TIMESTAMP WITHOUT TIME ZONE)
+
+
+
+Table: _prisma_migrations
+        id (CHARACTER VARYING(36), Primary Key)
+        checksum (CHARACTER VARYING(64))
+        finished_at (TIMESTAMP WITH TIME ZONE)
+        migration_name (CHARACTER VARYING(255))
+        logs (TEXT)
+        rolled_back_at (TIMESTAMP WITH TIME ZONE)
+        started_at (TIMESTAMP WITH TIME ZONE)
+        applied_steps_count (INTEGER)
+
+Table: customers
+        customer_id (INT, Primary Key)
+        name (VARCHAR)
+        email (VARCHAR)
+        registration_date (DATE)
+        last_login (TIMESTAMP)
+    
+    
+
+Table: consumption_final
+Description: Represents a measurement in the system. It also contains the account names, subdivision, service address information.
+        id (TEXT)
+        premise_id (TEXT)
+        tenant_ctr (INTEGER)
+        account_name (TEXT) - User can get the Account Name. Can ask for unique names or can use that in the group, sort, etc.
+        service_address (TEXT)
+        rubs (TEXT)
+
+Table: User
+Description: Represents a maniac in the system.
+        id (INTEGER, Primary Key)
+        email (TEXT) - Unique identifier for the user
+        name (TEXT) - Name of the user
+        phone (TEXT)
+        password (TEXT)
+        rules (TEXT)

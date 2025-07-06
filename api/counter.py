@@ -35,7 +35,7 @@ def count_object(videoPath, line_p1, line_p2):
         if not ret:
             break
         count += 1
-        if count % 6 != 0:
+        if count % 3 != 0:
             continue
         frame=cv2.resize(frame,(860,480))
         results = model.track(frame, persist=True)
@@ -47,18 +47,18 @@ def count_object(videoPath, line_p1, line_p2):
             
             for box, track_id, class_id in zip(boxes, track_ids, class_ids):
                 class_name = model.names[class_id]
-                print(class_name)
+                #print(class_name)
                 if class_name not in allowed_classes:
                     continue
                 x1, y1, x2, y2 = map(int, box)
                 cx=(x1+x2)//2
                 cy=(y1+y2)//2
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color=(255,0,0),thickness= 2)
-                if track_id in hist:
+                if track_id in hist and track_id not in counted:
                     prev_cx, prev_cy=hist[track_id]
                     side_1=calculate(prev_cx, prev_cy, *line_p1, *line_p2)
                     side_2=calculate(cx, cy, *line_p1, *line_p2)
-                    if side_1*side_2<0 and track_id not in counted:
+                    if side_1*side_2<0:
                         if side_2<0:
                             #car in
                             car_in +=1
