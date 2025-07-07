@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, X, Filter, ArrowUpDown, LoaderCircle } from 'lucide-react';
 import { setTypesAndData, type SComponent } from './appStore';
 
-function takeDecision({ data, query }: { data: any[], query: string }) {
+export function takeDecision({ data, query }: { data: any[], query: string }) {
   // Handle empty data
   if (!data || data.length === 0) return;
 

@@ -36,7 +36,9 @@ def analyze_input(state:State):
     if any(word in content for word in ["find", "get", "calculate","select"]):
         intent = 'table_names'
     if intent == 'table_names':
-      state['messages'].clear()
+      if(len(state['messages']) >= 20):
+        state['messages'] = state['messages'][10:]
+        print('raised state overflow:',len(state['messages']))
       return {
         'messages':[last_message],
         'schema':'',

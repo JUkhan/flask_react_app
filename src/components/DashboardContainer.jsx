@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Plus, X, BarChart3, TrendingUp, PieChart as PieChartIcon, Grid3X3, Edit2, Move } from 'lucide-react';
-import { useDashboardStore, addComponentState, updateComponentState, removeComponentState } from './appStore';
+import { useDashboardStore, addComponentState, updateComponentState, removeComponentState, setDashboardState } from './appStore';
+import { useEffect } from 'react';
 
 // Sample data for charts
 const sampleLineData = [
@@ -35,8 +36,33 @@ const sampleTableData = [
   { id: 4, name: 'Alice Brown', email: 'alice@example.com', status: 'Pending', revenue: '$900' },
 ];
 const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042','#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
+const useComponentData = (query, data) => {
+  const [xdata, setData] = useState(data||[]); // Initialize with provided data or empty array
+  useEffect(() => {
+    console.log('useComponentData mounted with query:', query, data); 
+    if (!data || data.length === 0) {
+      fetch(`/api/get-query-result2`, {
+        method: 'POST',
+        headers: {  
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        setData(data.data || []);
+      })
+      .catch(error => {
+        console.error('Error fetching query result:', error);
+      });
+    }
+  }, [query, data]);
+  return xdata;
+}
 // Individual component definitions
-const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => (
+const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns , query  }) => {
+  const xdata = useComponentData(query, data);
+  return (
   <div className="bg-white rounded-lg shadow-lg p-6 relative group">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
@@ -56,7 +82,7 @@ const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => 
       </div>
     </div>
     <ResponsiveContainer width="100%" height={250}>
-      <LineChart data={data}>
+      <LineChart data={xdata}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey={columns[0]} />
         <YAxis />
@@ -69,9 +95,11 @@ const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => 
     </ResponsiveContainer>
   </div>
 );
+}
 
-const BarChartComponent = ({ id, title, onRemove, onEdit, data, columns }) => (
-  <div className="bg-white rounded-lg shadow-lg p-6 relative group">
+const BarChartComponent = ({ id, title, onRemove, onEdit, data, columns, query  }) => {
+  const xdata = useComponentData(query, data);
+  return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -90,7 +118,7 @@ const BarChartComponent = ({ id, title, onRemove, onEdit, data, columns }) => (
       </div>
     </div>
     <ResponsiveContainer width="100%" height={250}>
-      <BarChart data={data}>
+      <BarChart data={xdata}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey={columns[0]} />
         <YAxis />
@@ -100,10 +128,11 @@ const BarChartComponent = ({ id, title, onRemove, onEdit, data, columns }) => (
       </BarChart>
     </ResponsiveContainer>
   </div>
-);
+}
 
-const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => (
-  <div className="bg-white rounded-lg shadow-lg p-6 relative group">
+const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query  }) => {
+   const xdata = useComponentData(query, data);
+  return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -124,7 +153,7 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => (
     <ResponsiveContainer width="100%" height={250}>
       <PieChart>
         <Pie
-          data={data}
+          data={xdata}
           cx="50%"
           cy="50%"
           labelLine={false}
@@ -133,7 +162,7 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => (
           fill="#8884d8"
           dataKey={columns[1]}
         >
-          {data.map((entry, index) => (
+          {xdata.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
           ))}
         </Pie>
@@ -141,10 +170,11 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns  }) => (
       </PieChart>
     </ResponsiveContainer>
   </div>
-);
+}
 
-const TableComponent = ({ id, title, onRemove, onEdit, columns, data }) => (
-  <div className="bg-white rounded-lg shadow-lg p-6 relative group">
+const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query }) => {
+  const xdata = useComponentData(query, data);
+  return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -175,7 +205,7 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data }) => (
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {data.map((row) => (
+          {xdata.map((row) => (
             <tr key={row.id} className="hover:bg-gray-50">
               {columns.map((col, index) => (
                 <td key={index} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -189,8 +219,14 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data }) => (
       </table>
     </div>
   </div>
-);
+}
 
+const componentMapByType = {
+  'line': LineChartComponent,
+  'bar': BarChartComponent,
+  'pie': PieChartComponent, 
+  'table': TableComponent,
+};
 // Main Dashboard Container
 const DashboardContainer = () => {
   //const [components, setComponents] = useState([]);
@@ -198,7 +234,27 @@ const DashboardContainer = () => {
   const [editingComponent, setEditingComponent] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const dashboard=useDashboardStore()
-  console.log(dashboard)
+  console.log('Dashboard data:', dashboard);
+  useEffect(() => {
+    const userId = sessionStorage.getItem('userId');
+    if (userId) {
+      console.log('User ID from sessionStorage:', userId);
+      fetch(`/api/dashboards/${userId}`)
+        .then(response => response.json())  
+        .then(response =>response.data)
+        .then(data => {
+          console.log('Fetched dashboard data:', data);
+           const types=new Set(data.map(component => component.type));
+            data=data.map(component => {
+              component.columns = component.columns.split(',').map(col => col.trim());
+              return component;
+            });
+          console.log('Processed dashboard data:', data);
+          setDashboardState({ components: data, types: Array.from(types)});  
+          
+        })
+    }
+  }, []);
   
   const componentTypes=dashboard.types.reduce((acc, type) => {
     switch (type) {
@@ -217,25 +273,73 @@ const DashboardContainer = () => {
     }
     return acc;
   },[])
-  const addComponent = useCallback((type, componentTypes,data, columns) => {
+  console.log('Component Types:', componentTypes);
+  const addComponent = useCallback((type, componentTypes) => {
     const componentType = componentTypes.find(ct => ct.type === type);
     if (componentType) {
       const newComponent = {
-        id: Date.now() + Math.random(),
+        id: Number(new Date().getTime()), 
         type: type,
         title: componentType.defaultTitle,
         component: componentType.component,
-        data:data,
-        columns:columns,
+        data: dashboard.data,
+        query: dashboard.query || '',
+        columns: dashboard.columns,
+        user_id: sessionStorage.getItem('userId') || '',
       };
+      console.log('Adding new component:', newComponent);
       addComponentState(newComponent);
+      if(newComponent.user_id) {
+        const copyComponent = { ...newComponent };
+        copyComponent.columns = copyComponent.columns.join(',');
+        delete copyComponent.component; 
+        delete copyComponent.data;
+        fetch('/api/dashboard', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(copyComponent),
+        })
+        .then(response => response.json())
+        .then(data => data.dashboard)
+        .then(data => {
+          console.log('New component ID:', data.id, newComponent.id);
+          let components=dashboard.components.filter(comp => comp.id !== newComponent.id);
+          components.shift({ ...newComponent, id: data.id });
+          console.log('Updated components:', components);
+          setDashboardState({ components });
+          console.log('Component added successfully:', data);
+        })
+        .catch(error => {
+          console.error('Error adding component:', error);
+        });
+      }
     }
     setShowAddMenu(false);
-  }, []);
+  }, [dashboard]);
 
   const removeComponent = useCallback((id) => {
+    console.log('Removing component with ID:', id, typeof id, dashboard.components);
+    const component = dashboard.components.find(comp => comp.id === id);
+    console.log('Component to remove:', component);
     removeComponentState(id);
-  }, []);
+    if (component && component.user_id) {
+      fetch(`/api/dashboard/${component.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(() => {
+        console.log('Component removed successfully');
+      })  
+      .catch(error => {
+        console.error('Error removing component:', error);
+      });
+    }
+  }, [dashboard.components]);
 
   const startEditing = useCallback((id, currentTitle) => {
     setEditingComponent(id);
@@ -247,7 +351,23 @@ const DashboardContainer = () => {
     updateComponentState({...component, title:editTitle});
     setEditingComponent(null);
     setEditTitle('');
-  }, [editingComponent, editTitle]);
+    if (component && component.user_id) {
+      fetch(`/api/dashboard/${component.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: editTitle }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Component updated successfully:', data);
+      })
+      .catch(error => {
+        console.error('Error updating component:', error);
+      });
+    }
+  }, [dashboard.components, editingComponent, editTitle]);
 
   const cancelEdit = useCallback(() => {
     setEditingComponent(null);
@@ -267,7 +387,7 @@ const DashboardContainer = () => {
           {/* Add Component Button */}
           <div className="relative">
             {dashboard.columns.length ? <button
-              onClick={() => setShowAddMenu(!showAddMenu)}
+              onClick={() =>{ setShowAddMenu(!showAddMenu);console.log('Add Component clicked');}}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md"
             >
               <Plus size={20} />
@@ -275,6 +395,7 @@ const DashboardContainer = () => {
             </button>:null}
             
             {/* Add Component Menu */}
+            
             {showAddMenu && (
               <div className="absolute right-0 top-12 bg-white rounded-lg shadow-xl border z-10 min-w-48">
                 <div className="py-2">
@@ -283,7 +404,7 @@ const DashboardContainer = () => {
                     return (
                       <button
                         key={type.type}
-                        onClick={() => addComponent(type.type, componentTypes, dashboard.data, dashboard.columns)}
+                        onClick={() => addComponent(type.type, componentTypes)}
                         className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
                       >
                         <IconComponent size={18} className="text-gray-600" />
@@ -315,7 +436,7 @@ const DashboardContainer = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {dashboard.components.map((comp) => {
-              const ComponentToRender = comp.component;
+              const ComponentToRender = componentMapByType[comp.type] || TableComponent;
               return (
                 <div key={comp.id} className="relative">
                   <ComponentToRender
@@ -325,6 +446,7 @@ const DashboardContainer = () => {
                     onEdit={startEditing}
                     data={comp.data} 
                     columns={comp.columns} 
+                    query={comp.query}
                   />
                 </div>
               );

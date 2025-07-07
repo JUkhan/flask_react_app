@@ -16,6 +16,8 @@ import HomePage from './components/HomePage';
 import CounterPage from './components/CounterPage';
 import Counter2Page from './components/Counter2Page';
 import DashboardPage from './components/DashboardPage';
+import LoginPage from './components/LoginPage';
+import Chat from './components/chat';
 // Root route component
 function RootComponent() {
   return (
@@ -60,8 +62,20 @@ function RootComponent() {
                 >
                   Dashboard
                 </Link>
+                <Link 
+                  to="/login" 
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  activeProps={{ className: "text-blue-600 bg-blue-50" }}
+                >
+                  Login
+                </Link>
               </div>
+              
             </div>
+            
+                
+                 <Chat/>
+            
           </div>
         </div>
       </nav>
@@ -103,13 +117,20 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 });
 
+const LoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: LoginPage,
+});
+
 
 // Create route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
   aboutRoute,
   usersRoute,
-  dashboardRoute
+  dashboardRoute,
+  LoginRoute
 ]);
 
 // Create router

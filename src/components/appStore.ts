@@ -6,6 +6,7 @@ export const store = new Store({
   image: '',
   refresh: false,
   uploaded: false,
+  userId: '',
 })
 export const useAppStore = () => {
   return useStore(store)
@@ -15,11 +16,13 @@ export const setState = (newState: Partial<typeof store.state>) => {
   store.setState((prev) => ({ ...prev, ...newState }))
 }
 export type SComponent = {
-  id: string; // Optional ID for the component
+  id: any; // Optional ID for the component
   type: 'line' | 'bar' | 'pie' | 'table';
   title: string;
   query: string;
   data?: any[];
+  columns?: string[];
+  user_id?: any; // Optional user ID for the component
 }
 
 interface DashboardState {
@@ -34,7 +37,7 @@ const dashboard = new Store<DashboardState>({
   types: [],
   data: [],
   columns: [],
-  query: '', // Optional query for the dashboard
+  query: '',
 })
 
 export const useDashboardStore = () => {
@@ -48,7 +51,7 @@ export const setDashboardState = (newState: Partial<typeof dashboard.state>) => 
 export const addComponentState = (component: SComponent) => {
   dashboard.setState((prev) => ({
     ...prev,
-    components: [...prev.components, component]
+    components: [component, ...prev.components]
   }))
 }
 export const removeComponentState = (id: string) => {
