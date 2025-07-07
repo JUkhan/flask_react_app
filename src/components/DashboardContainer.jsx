@@ -4,37 +4,7 @@ import { Plus, X, BarChart3, TrendingUp, PieChart as PieChartIcon, Grid3X3, Edit
 import { useDashboardStore, addComponentState, updateComponentState, removeComponentState, setDashboardState } from './appStore';
 import { useEffect } from 'react';
 
-// Sample data for charts
-const sampleLineData = [
-  { name: 'Jan', sales: 4000, revenue: 2400 },
-  { name: 'Feb', sales: 3000, revenue: 1398 },
-  { name: 'Mar', sales: 2000, revenue: 9800 },
-  { name: 'Apr', sales: 2780, revenue: 3908 },
-  { name: 'May', sales: 1890, revenue: 4800 },
-  { name: 'Jun', sales: 2390, revenue: 3800 },
-];
 
-const sampleBarData = [
-  { name: 'Product A', value: 400 },
-  { name: 'Product B', value: 300 },
-  { name: 'Product C', value: 200 },
-  { name: 'Product D', value: 278 },
-  { name: 'Product E', value: 189 },
-];
-
-const samplePieData = [
-  { name: 'Desktop', value: 400, color: '#0088FE' },
-  { name: 'Mobile', value: 300, color: '#00C49F' },
-  { name: 'Tablet', value: 300, color: '#FFBB28' },
-  { name: 'Other', value: 200, color: '#FF8042' },
-];
-
-const sampleTableData = [
-  { id: 1, name: 'John Doe', email: 'john@example.com', status: 'Active', revenue: '$1,200' },
-  { id: 2, name: 'Jane Smith', email: 'jane@example.com', status: 'Inactive', revenue: '$800' },
-  { id: 3, name: 'Bob Johnson', email: 'bob@example.com', status: 'Active', revenue: '$1,500' },
-  { id: 4, name: 'Alice Brown', email: 'alice@example.com', status: 'Pending', revenue: '$900' },
-];
 const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042','#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
 const useComponentData = (query, data) => {
   const [xdata, setData] = useState(data||[]); // Initialize with provided data or empty array
@@ -89,7 +59,16 @@ const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns , query
         <Tooltip />
         <Legend />
         {columns.slice(1).map((col, index) => (
-          <Line key={index} type="monotone" dataKey={col} stroke={colors[index % colors.length]} strokeWidth={2} />
+           <Line
+              key={index}
+              type="monotone"
+              dataKey={col}
+              stroke={colors[index % colors.length]}
+              strokeWidth={ 2}
+              name={col}
+              dot={{ fill: colors[index % colors.length], strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, stroke: colors[index % colors.length], strokeWidth: 2 }}
+            />
         ))}
       </LineChart>
     </ResponsiveContainer>
@@ -157,7 +136,7 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query 
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+          label={(obj) => `${obj[columns[0]]} ${(obj['percent'] * 100).toFixed(0)}%`}
           outerRadius={80}
           fill="#8884d8"
           dataKey={columns[1]}
