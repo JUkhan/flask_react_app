@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useState, useRef, useEffect } from 'react';
 import {takeDecision} from "./Search"
-import { MicVocalIcon } from 'lucide-react';
+import { MicIcon } from 'lucide-react';
 import { useSpeechRecognition } from './useSpeechRecognition';
 
 export default function ChatPopup() {
@@ -214,9 +214,9 @@ export default function ChatPopup() {
             </button>
             <button
               onClick={toggleListening}
-              className={`px-4 py-2 ${isListening?'bg-red-500':'bg-blue-500'} text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
+              className={`px-4 py-2 ${isListening?'bg-red-500':'bg-blue-500'} text-white rounded-lg hover:${isListening?'bg-red-600':'bg-blue-600'} focus:outline-none focus:ring-2 focus:${isListening?'ring-red-500':'ring-blue-500'} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
             >
-              <MicVocalIcon className="w-5 h-5" />
+              <MicIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
