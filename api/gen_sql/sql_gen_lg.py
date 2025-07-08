@@ -36,15 +36,11 @@ def analyze_input(state:State):
     if any(word in content for word in ["find", "get", "calculate","select"]):
         intent = 'table_names'
     if intent == 'table_names':
-      if(len(state['messages']) >= 20):
-        state['messages'] = state['messages'][10:]
+      if(len(state['messages']) >= 30):
+        del state['messages'][10:]
         print('raised state overflow:',len(state['messages']))
-      return {
-        'messages':[last_message],
-        'schema':'',
-         'next':intent
-      }
-    return {**state, 'next':intent}
+        print('*'*80)
+    return {**state, 'next':intent }
   return state
 
 def get_table_names(state:State):
@@ -144,7 +140,7 @@ def run_qgn_chatbot(user_input, thread_id):
     user_message = HumanMessage(content=user_input)
     initial_state["messages"].append(user_message)
     response = graph.invoke(initial_state, config=config)
-    
+    print("len:", len(response["messages"]))
     return response["messages"][-1].content
 
 def main():
