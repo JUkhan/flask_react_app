@@ -43,7 +43,7 @@ export function takeDecision({ data, query }: { data: any[], query: string }) {
   else if (acc['number'] > 1) {
     setTypesAndData(['line', 'table'], data, query, columns);
   } else if (acc['number'] === 1) {
-    setTypesAndData(['bar', 'pie', 'table'], data, query, columns);
+    setTypesAndData(['bar', 'pie', 'donut', 'table'], data, query, columns);
   } else {
     setTypesAndData(['table'], data, query, columns);
   }

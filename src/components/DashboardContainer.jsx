@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Plus, X, BarChart3, TrendingUp, PieChart as PieChartIcon, Grid3X3, Edit2, Move, ChevronLeft, ChevronRight  } from 'lucide-react';
+import { Plus, X, BarChart3, TrendingUp, DonutIcon, PieChart as PieChartIcon, Grid3X3, Edit2, Move, ChevronLeft, ChevronRight  } from 'lucide-react';
 import { useDashboardStore, addComponentState, updateComponentState, removeComponentState, setDashboardState } from './appStore';
 import { useEffect } from 'react';
 
@@ -124,8 +124,17 @@ const CustomTooltip = ({ active, payload, columns }) => {
     return null;
   };
 
-const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query  }) => {
+const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query, type='donut'  }) => {
    const xdata = useComponentData(query, data);
+   let donut = {};
+  if (type === 'donut') {
+    donut = {
+      innerRadius: 40,
+      paddingAngle: 3,
+      startAngle: 90,
+      endAngle: -270,
+    };
+  }
   return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
@@ -150,11 +159,12 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query 
           data={xdata}
           cx="50%"
           cy="50%"
-          labelLine={false}
+          labelLine={true}
           label={(obj) => `${obj[columns[0]]} ${(obj['percent'] * 100).toFixed(0)}%`}
           outerRadius={80}
           fill="#8884d8"
           dataKey={columns[1]}
+          {...donut}
         >
           {xdata.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
@@ -381,6 +391,7 @@ const componentMapByType = {
   'bar': BarChartComponent,
   'pie': PieChartComponent, 
   'table': TableComponent,
+  'donut': PieChartComponent, 
 };
 // Main Dashboard Container
 const DashboardContainer = () => {
@@ -421,6 +432,9 @@ const DashboardContainer = () => {
         break;
       case 'pie':
         acc.push({ type: 'pie', name: 'Pie Chart', icon: PieChartIcon, component: PieChartComponent, defaultTitle: 'Pie Chart' });
+        break;  
+         case 'donut':
+        acc.push({ type: 'donut', name: 'Donut Chart', icon: DonutIcon, component: PieChartComponent, defaultTitle: 'Donut Chart' });
         break;  
       case 'table':
         acc.push({ type: 'table', name: 'Table', icon: Grid3X3, component: TableComponent, defaultTitle: 'Table' });
@@ -602,6 +616,7 @@ const DashboardContainer = () => {
                     data={comp.data} 
                     columns={comp.columns} 
                     query={comp.query}
+                    type={comp.type}
                   />
                 </div>
               );
