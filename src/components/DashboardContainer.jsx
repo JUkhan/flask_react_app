@@ -38,7 +38,7 @@ const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns , query
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => onEdit(id, 'Line Chart')}
+          onClick={() => onEdit(id, title)}
           className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
         >
           <Edit2 size={16} />
@@ -78,12 +78,13 @@ const LineChartComponent = ({ id, title, onRemove, onEdit, data, columns , query
 
 const BarChartComponent = ({ id, title, onRemove, onEdit, data, columns, query  }) => {
   const xdata = useComponentData(query, data);
+  console.log('BarChartComponent title:', title);
   return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => onEdit(id, 'Bar Chart')}
+          onClick={() => onEdit(id, title)}
           className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
         >
           <Edit2 size={16} />
@@ -116,7 +117,7 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query 
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => onEdit(id, 'Pie Chart')}
+          onClick={() => onEdit(id, title)}
           className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
         >
           <Edit2 size={16} />
@@ -158,7 +159,7 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query }) =
       <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => onEdit(id, 'Table')}
+          onClick={() => onEdit(id, title)}
           className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
         >
           <Edit2 size={16} />
@@ -185,7 +186,7 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query }) =
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {xdata.map((row) => (
-            <tr key={row.id} className="hover:bg-gray-50">
+            <tr key={row[columns[0]]} className="hover:bg-gray-50">
               {columns.map((col, index) => (
                 <td key={index} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {row[col] || '-'} 
@@ -285,7 +286,7 @@ const DashboardContainer = () => {
         .then(data => {
           console.log('New component ID:', data.id, newComponent.id);
           let components=dashboard.components.filter(comp => comp.id !== newComponent.id);
-          components.shift({ ...newComponent, id: data.id });
+          components.unshift({ ...newComponent, id: data.id });
           console.log('Updated components:', components);
           setDashboardState({ components });
           console.log('Component added successfully:', data);
