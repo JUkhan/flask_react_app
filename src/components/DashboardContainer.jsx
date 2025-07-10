@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Plus, X, BarChart3, TrendingUp, PieChart as PieChartIcon, Grid3X3, Edit2, Move } from 'lucide-react';
+import { Plus, X, BarChart3, TrendingUp, PieChart as PieChartIcon, Grid3X3, Edit2, Move, ChevronLeft, ChevronRight  } from 'lucide-react';
 import { useDashboardStore, addComponentState, updateComponentState, removeComponentState, setDashboardState } from './appStore';
 import { useEffect } from 'react';
 
@@ -109,6 +109,20 @@ const BarChartComponent = ({ id, title, onRemove, onEdit, data, columns, query  
     </ResponsiveContainer>
   </div>
 }
+const CustomTooltip = ({ active, payload, columns }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800">{data[columns[0]]}</p>
+          <p className="text-sm text-gray-600">
+            Value: <span className="font-medium">{data[columns[1]]}</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
 const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query  }) => {
    const xdata = useComponentData(query, data);
@@ -146,61 +160,222 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query 
             <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
           ))}
         </Pie>
-        <Tooltip />
+        <Tooltip content={<CustomTooltip columns={columns} />} />
       </PieChart>
     </ResponsiveContainer>
   </div>
 }
 
-const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query }) => {
-  const xdata = useComponentData(query, data);
-  return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
+
+const Pager = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
+  if (totalPages <= 1) return null;
+
+  const startIndex = (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      // Show all pages
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      // Calculate start and end of middle section
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Add ellipsis if needed
+      if (start > 2) {
+        pages.push('...');
+      }
+      
+      // Add middle pages
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== totalPages) {
+          pages.push(i);
+        }
+      }
+      
+      // Add ellipsis if needed
+      if (end < totalPages - 1) {
+        pages.push('...');
+      }
+      
+      // Always show last page
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+      {/* Mobile view */}
+      <div className="flex justify-between flex-1 sm:hidden">
         <button
-          onClick={() => onEdit(id, title)}
-          className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Edit2 size={16} />
+          Previous
         </button>
+        <span className="text-sm text-gray-700">
+          Page {currentPage} of {totalPages}
+        </span>
         <button
-          onClick={() => onRemove(id)}
-          className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <X size={16} />
+          Next
         </button>
       </div>
-    </div>
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            {columns.map((col, index) => (
-              <th key={index} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {col}   
-              </th>
-            ))}
-            
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {xdata.map((row) => (
-            <tr key={row[columns[0]]} className="hover:bg-gray-50">
-              {columns.map((col, index) => (
-                <td key={index} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {row[col] || '-'} 
-                </td>
-              ))}
-              
-            </tr>
+      
+      {/* Desktop view */}
+      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-gray-700">
+            Showing <span className="font-medium">{startIndex}</span> to{' '}
+            <span className="font-medium">{endIndex}</span> of{' '}
+            <span className="font-medium">{totalItems}</span> results
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          
+          {renderPageNumbers().map((page, index) => (
+            <React.Fragment key={index}>
+              {page === '...' ? (
+                <span className="px-3 py-2 text-sm font-medium text-gray-700">
+                  ...
+                </span>
+              ) : (
+                <button
+                  onClick={() => onPageChange(page)}
+                  className={`relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                    page === currentPage
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              )}
+            </React.Fragment>
           ))}
-        </tbody>
-      </table>
+          
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-}
+  );
+};
 
+const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query, itemsPerPage = 4 }) => {
+  const xdata = useComponentData(query, data);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Reset to first page when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [xdata]);
+  
+  // Calculate pagination values
+  const totalItems = xdata.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  
+  // Get current page data
+  const currentPageData = xdata.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  console.log('Current Page Data:', currentPageData);
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      console.log('Changing to page:', page);
+      setCurrentPage(page);
+    }
+  };
+  
+  return (
+    <div className="bg-white rounded-lg shadow-lg relative group">
+      <div className="flex justify-between items-center mb-4 p-6 pb-0">
+        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onEdit(id, title)}
+            className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button
+            onClick={() => onRemove(id)}
+            className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+      
+      <div className="overflow-x-auto px-6">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              {columns.map((col, index) => (
+                <th key={index} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {col}   
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {currentPageData.map((row, rowIndex) => (
+              <tr key={row[columns[0]] || rowIndex} className="hover:bg-gray-50">
+                {columns.map((col, index) => (
+                  <td key={index} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {row[col] || '-'} 
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {totalPages > 1 && (
+        <Pager
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+        />
+      )}
+    </div>
+  );
+};
 const componentMapByType = {
   'line': LineChartComponent,
   'bar': BarChartComponent,
@@ -414,7 +589,7 @@ const DashboardContainer = () => {
             </button> */}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
             {dashboard.components.map((comp) => {
               const ComponentToRender = componentMapByType[comp.type] || TableComponent;
               return (
