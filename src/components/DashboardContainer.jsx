@@ -4,8 +4,13 @@ import { Plus, X, BarChart3, TrendingUp, DonutIcon, PieChart as PieChartIcon, Gr
 import { useDashboardStore, addComponentState, updateComponentState, removeComponentState, setDashboardState } from './appStore';
 import { useEffect } from 'react';
 
-
-const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042','#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
+// add 10 more colors to the palette
+const colors = [
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#92a8d1',
+  '#a4de6c', '#d0ed57', '#8dd1e1', '#d88884', '#b6b6b6', '#f67280', '#c06c84', '#6c5b7b',
+  '#355c7d', '#f8b195', '#f7cac9'
+];
+//const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042','#8884d8', '#82ca9d', '#ffc658', '#ff8042', ];
 const useComponentData = (query, data) => {
   const [xdata, setData] = useState(data||[]); // Initialize with provided data or empty array
   useEffect(() => {
@@ -116,7 +121,7 @@ const CustomTooltip = ({ active, payload, columns }) => {
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-800">{data[columns[0]]}</p>
           <p className="text-sm text-gray-600">
-            Value: <span className="font-medium">{data[columns[1]]}</span>
+            {columns[1]}: <span className="font-medium">{data[columns[1]]}</span>
           </p>
         </div>
       );
@@ -130,9 +135,10 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query,
   if (type === 'donut') {
     donut = {
       innerRadius: 40,
-      paddingAngle: 3,
+      paddingAngle: 1,
       startAngle: 90,
       endAngle: -270,
+      labelLine:true
     };
   }
   return <div className="bg-white rounded-lg shadow-lg p-6 relative group">
@@ -159,7 +165,7 @@ const PieChartComponent = ({ id, title, onRemove, onEdit, data, columns , query,
           data={xdata}
           cx="50%"
           cy="50%"
-          labelLine={true}
+          labelLine={false}
           label={(obj) => `${obj[columns[0]]} ${(obj['percent'] * 100).toFixed(0)}%`}
           outerRadius={80}
           fill="#8884d8"
@@ -228,7 +234,7 @@ const Pager = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage
   };
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200 rounded-bl-lg rounded-br-lg">
       {/* Mobile view */}
       <div className="flex justify-between flex-1 sm:hidden">
         <button
@@ -303,7 +309,7 @@ const Pager = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage
   );
 };
 
-const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query, itemsPerPage = 4 }) => {
+const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query, itemsPerPage = 3 }) => {
   const xdata = useComponentData(query, data);
   const [currentPage, setCurrentPage] = useState(1);
   
