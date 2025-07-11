@@ -1,8 +1,9 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useState, useRef, useEffect } from 'react';
 import {takeDecision} from "./Search"
-import { MicIcon } from 'lucide-react';
+import { MicIcon, SignalHighIcon, Loader2Icon } from 'lucide-react';
 import { useSpeechRecognition } from './useSpeechRecognition';
+
 
 export default function ChatPopup() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,13 +14,14 @@ export default function ChatPopup() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
+  const [isLoading, setLoading] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
   const {recognitionRef, text, interimText, setError, isListening, setIsListening, setText, setInterimText} =useSpeechRecognition()
-  console.log('intrimtext:', interimText)
-  console.log('text:', text)
+  //console.log('intrimtext:', interimText)
+  //console.log('text:', text)
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -27,6 +29,23 @@ export default function ChatPopup() {
   useEffect(()=>{
     setInputValue(interimText||text)
   },[interimText, text])
+
+  useEffect(() => {
+    fetch('/api/get-bot-messages/' + (sessionStorage.getItem('userId')||'123'))
+      .then(response => response.json())  
+      .then(data => {
+        if (data.messages && data.messages.length > 0) {
+          const initialMessages = data.messages.map((msg, index) => ({
+            id: index + 1,
+            text: msg.text,
+            sender: msg.sender,
+            hasSql: msg.sender==='bot'? (msg.text.startsWith('SELECT') || msg.text.startsWith('select')): false,
+            timestamp: new Date()
+          }));
+          setMessages(initialMessages);
+        }
+      })  
+  }, []);
 
   const handleSendMessage = async () => {
     if (inputValue.trim() === '') return;
@@ -55,7 +74,7 @@ export default function ChatPopup() {
         headers: {
           'Content-Type': 'application/json', 
         },
-        body: JSON.stringify({ user_input: newMessage.text, thread_id: '123'})
+        body: JSON.stringify({ user_input: newMessage.text, thread_id: sessionStorage.getItem('userId')||'123'})
       })
       .then(response => response.json())
       .then(data => {
@@ -70,6 +89,28 @@ export default function ChatPopup() {
         setIsTyping(false);
       });
     
+  };
+
+  const loadSqlData = (sql) => {
+    if (!sql) return; 
+    setLoading(true);  
+    fetch('/api/get-query-result2', {
+      method: 'POST', 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: sql })
+    })
+    .then(response => response.json())
+    .then(data => {
+      setLoading(false);
+      data.sql= sql;
+      takeDecision(data);
+    })
+    .catch(error => {
+      setLoading(false);
+      console.error('Error fetching SQL data:', error);
+    });
   };
 
   const handleKeyPress = (e) => {
@@ -163,9 +204,17 @@ export default function ChatPopup() {
                 className={`max-w-xs px-4 py-2 rounded-lg ${
                   message.sender === 'user'
                     ? 'bg-blue-500 text-white rounded-br-none'
-                    : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                    : 'bg-gray-200 text-gray-800 rounded-bl-none relative group'
                 }`}
               >
+                {message.hasSql ?<button
+                disabled={isLoading}
+          onClick={() => loadSqlData(message.text)}
+          title='Click to load data'
+          className="p-1 cursor-pointer opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 text-red-400 hover:text-red-600 transition-colors"
+        >
+          {isLoading?<Loader2Icon className={` w-4 h-4`}/>:<SignalHighIcon className={` w-4 h-4`} />}
+        </button>:null}
                 <p className="text-sm">{message.text}</p>
                 <p className={`text-xs mt-1 ${
                   message.sender === 'user' ? 'text-blue-200' : 'text-gray-500'

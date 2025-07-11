@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, List
 from sqlalchemy import text, inspect
 #from gen_sql.lc_gen_query import generate_sql_query
-from gen_sql.sql_gen_lg import run_qgn_chatbot
+from gen_sql.sql_gen_lg import run_qgn_chatbot, get_messages
 from gen_sql.schema import get_schema
 from sqlalchemy import Column, Integer, String, Date, DateTime, Numeric, Text, ForeignKey
 from sqlalchemy.orm import relationship
@@ -426,6 +426,16 @@ def login():
             return jsonify(user.to_dict())
     return jsonify(None)
 
+@app.route("/api/get-bot-messages/<thread_id>")
+def get_bot_messages(thread_id):
+    try:
+        messages=get_messages(thread_id)
+        return {'messages': messages}
+        
+    except Exception as e:
+        print(f'Error: {str(e)}')
+        return {'error': str(e)}, 500
+    
 @app.route("/api/get-query-result", methods=['POST'])
 def get_query_result():
     try:

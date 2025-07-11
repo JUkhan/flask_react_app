@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from typing import Annotated
 from langgraph.graph import StateGraph, START, END
@@ -121,6 +122,26 @@ graph_builder.add_edge('query', END)
 
 graph = graph_builder.compile(checkpointer=InMemorySaver())
 
+def get_messages(thread_id):
+   if not thread_id:
+        return []
+   print(thread_id)
+   config = {"configurable": {"thread_id": thread_id}}
+   current_state = graph.get_state(config)
+   if not current_state.values:
+      return []
+   
+   messages=current_state.values['messages']
+   messages=[msg for msg in messages if not (isinstance(msg, SystemMessage) or msg.content.strip().startswith('Given this database schema:'))]
+   res=[]
+   #{ id: 1, text: "Hello! How can I help you today?", sender: "bot", timestamp: new Date() }
+   for msg in messages:
+      if isinstance(msg, HumanMessage):
+        res.append({'text':msg.content, 'sender': 'user' })
+      else:
+         res.append({'text':extract(msg.content), 'sender': 'bot' })
+   return res
+
 def run_qgn_chatbot(user_input, thread_id):
     if not thread_id:
         thread_id = "1"
@@ -143,6 +164,18 @@ def run_qgn_chatbot(user_input, thread_id):
     print("len:", len(response["messages"]))
     return response["messages"][-1].content
 
+def extract(text, substr='sqlite'):
+    json_regex = rf'```{substr}\s*([\s\S]*?)\s*```'
+    match = re.search(json_regex, text)
+    
+    if not match:
+        return text
+    
+    if not match.group(1):
+        return text
+    
+    return match.group(1).strip()
+    
 def main():
   config = {"configurable": {"thread_id": '1'}}
   
