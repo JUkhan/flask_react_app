@@ -672,7 +672,7 @@ def create_dashboard():
 def get_dashboards(user_id):
     print('user-id:',user_id)
     try:
-        dashboards = db.session.query(Dashboard).filter_by(user_id=user_id).all()
+        dashboards = db.session.query(Dashboard).filter_by(user_id=user_id).order_by(Dashboard.created_at.desc()).all()
         dashboards = [das.to_dict() for das in dashboards]
 
         return jsonify({'data':dashboards}), 200
@@ -703,7 +703,10 @@ def update_user(dashboard_id):
         
         # Update fields if provided
         
-        dashboard.title=data['title']
+        if 'title' in data:
+            dashboard.title=data['title']
+        if 'columns' in data:
+            dashboard.columns=data['columns']
         
         db.session.commit()
         
