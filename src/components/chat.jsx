@@ -104,7 +104,7 @@ export default function ChatPopup() {
     .then(response => response.json())
     .then(data => {
       setLoading(false);
-      data.sql= sql;
+      data.query= sql;
       takeDecision(data);
     })
     .catch(error => {
