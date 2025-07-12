@@ -1,0 +1,202 @@
+<div class="min-h-screen bg-gray-100 p-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="text-gray-600 mt-1">Manage your components dynamically</p>
+      </div>
+
+      <!-- Add Component Button -->
+      <div class="relative">
+        <button
+          *ngIf="isAdding"
+          (click)="toggleAddMenu()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+            />
+          </svg>
+          Add Component
+        </button>
+
+        <!-- Add Component Menu -->
+        <div
+          *ngIf="showAddMenu"
+          class="absolute right-0 top-12 bg-white rounded-lg shadow-xl border z-10 min-w-48"
+        >
+          <div class="py-2">
+            <button
+              *ngFor="let type of componentTypes"
+              (click)="addComponent(type.type)"
+              class="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+            >
+              <span class="text-gray-700">{{ type.name }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Component -->
+
+    <!-- Components Grid -->
+    <div *ngIf="components.length === 0" class="text-center py-12">
+      <div
+        class="inline-flex items-center justify-center w-16 h-16 bg-gray-200 rounded-full mb-4"
+      >
+        <svg
+          class="w-8 h-8 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          />
+        </svg>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No components yet</h3>
+      <p class="text-gray-500 mb-4">
+        Start building your dashboard by searching for data or adding components
+      </p>
+    </div>
+
+    <div
+      *ngIf="components.length > 0"
+      class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6"
+    >
+      <div *ngFor="let component of components" class="relative">
+        <div [ngSwitch]="component.type">
+          <!-- Line Chart -->
+          <app-line-chart
+            *ngSwitchCase="'line'"
+            [id]="component.id"
+            [title]="component.title"
+            [data]="component.data || []"
+            [columns]="component.columns || []"
+            [type]="component.type"
+            [query]="component.query"
+            (onRemove)="removeComponent(component.id)"
+            (onEdit)="startEditing(component.id, component.title)"
+          ></app-line-chart>
+
+          <!-- Bar Chart -->
+          <app-bar-chart
+            *ngSwitchCase="'bar'"
+            [id]="component.id"
+            [title]="component.title"
+            [data]="component.data || []"
+            [columns]="component.columns || []"
+            [type]="component.type"
+            [query]="component.query"
+            (onRemove)="removeComponent(component.id)"
+            (onEdit)="startEditing(component.id, component.title)"
+          ></app-bar-chart>
+
+          <!-- Pie Chart -->
+          <app-pie-chart
+            *ngSwitchCase="'pie'"
+            [id]="component.id"
+            [title]="component.title"
+            [data]="component.data || []"
+            [query]="component.query"
+            [columns]="component.columns || []"
+            [type]="component.type"
+            (onRemove)="removeComponent(component.id)"
+            (onEdit)="startEditing(component.id, component.title)"
+          ></app-pie-chart>
+
+          <!-- Donut Chart (using pie chart component) -->
+          <app-pie-chart
+            *ngSwitchCase="'donut'"
+            [id]="component.id"
+            [title]="component.title"
+            [data]="component.data || []"
+            [query]="component.query"
+            [columns]="component.columns || []"
+            [type]="component.type"
+            (onRemove)="removeComponent(component.id)"
+            (onEdit)="startEditing(component.id, component.title)"
+          ></app-pie-chart>
+
+          <!-- Table Component -->
+          <app-table-component
+            *ngSwitchCase="'table'"
+            [id]="component.id"
+            [title]="component.title"
+            [data]="component.data || []"
+            [columns]="component.columns || []"
+            [query]="component.query"
+            [type]="component.type"
+            (onRemove)="removeComponent(component.id)"
+            (onEdit)="startEditing(component.id, component.title)"
+            (onColumnsChange)="handleColumnsChange(component.id, $event)"
+          ></app-table-component>
+
+          <!-- Fallback for unknown component types -->
+          <div *ngSwitchDefault class="bg-white rounded-lg shadow-md p-6">
+            <div class="text-center text-red-600">
+              <p class="font-semibold">
+                Unknown component type: {{ component.type }}
+              </p>
+              <p class="text-sm text-gray-500 mt-2">
+                This component type is not supported.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div
+      *ngIf="editingComponent"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="text-lg font-semibold mb-4">Edit Component Title</h3>
+        <input
+          type="text"
+          [(ngModel)]="editTitle"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter component title"
+        />
+        <div class="flex gap-3 mt-4">
+          <button
+            (click)="saveEdit()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Save
+          </button>
+          <button
+            (click)="cancelEdit()"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Click outside to close menu -->
+  <div
+    *ngIf="showAddMenu"
+    class="fixed inset-0 z-5"
+    (click)="closeAddMenu()"
+  ></div>
+</div>
