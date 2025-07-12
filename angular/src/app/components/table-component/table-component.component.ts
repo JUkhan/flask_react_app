@@ -27,8 +27,8 @@ export class TableComponentComponent implements OnInit, OnChanges {
   page = '';
   // Pagination properties
   currentPage = 1;
-  pageSize = 5;
-  pageSizeOptions = [5, 10, 25, 50];
+  pageSize = 3;
+  pageSizeOptions = [3, 10, 25, 50];
   paginatedData: any[] = [];
   totalPages = 0;
   constructor(private dashboardService: DashboardService) { }
