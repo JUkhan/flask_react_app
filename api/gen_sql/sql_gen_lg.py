@@ -1,12 +1,12 @@
 import os
 import re
 from dotenv import load_dotenv
-from typing import Annotated
+from typing import Annotated, Sequence
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain.chat_models import init_chat_model
 #from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage,AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage,AIMessage, SystemMessage, BaseMessage
 from typing_extensions import TypedDict
 #from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
@@ -17,9 +17,9 @@ from gen_sql.schema import  get_schema, extract_table_names, filter_schemas_by_t
 load_dotenv()
 
 class State(TypedDict):
-  messages: Annotated[list, add_messages]
+  messages: Annotated[Sequence[BaseMessage], add_messages]
   schema: str
-  next: str # ''|'query'|'extended_query'
+  next: str # ''|query|extended_query
 
 llm = init_chat_model(
         model="gemini-2.0-flash",
@@ -46,6 +46,7 @@ def analyze_input(state:State):
 
 def get_table_names(state:State):
   last_message = state["messages"][-1]
+  system_message = SystemMessage(content="you are my assistant, please answer my question to the best of your ability.")
   human_message = HumanMessage(content=f"""
      Given this database table names with description([tableName] - [description]):
     ```
@@ -59,7 +60,7 @@ def get_table_names(state:State):
     Please provide only the comma separated table names without any explanations.
     """)  
                             
-  reply = llm.invoke([human_message])
+  reply = llm.invoke([system_message, human_message])
   print('TABLES:',reply.content)
   schema = filter_schemas_by_table_names(reply.content, get_schema())
  
@@ -76,7 +77,8 @@ def get_table_names(state:State):
 
 def get_query(state:State):
   last_message = state["messages"][-1]
-  system_message = SystemMessage(content="When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name")
+  
+  system_message = SystemMessage(content="you are my assistant, please answer my question to the best of your ability.")
   human_message = HumanMessage(content=f"""
     Given this database schema:
     ```
@@ -85,6 +87,7 @@ def get_query(state:State):
     Generate a SQL query for sqlite3 using the following query description:
     {last_message.content}
 
+    When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name.
     Only use table and column names that exist in the given database schema. Mismatched names will result in a fatal error when running the query.
     If no table names match the provided schema, return: "Your query description is not sufficient to generate a valid query."
 

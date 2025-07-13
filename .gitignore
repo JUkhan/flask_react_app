@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 api/venv/
 api/__pycache__/
+api/gen_sql/__pycache__/
 api/yolo11n.pt
 api/static/
 react/node_modules/
