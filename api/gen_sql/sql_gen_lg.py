@@ -41,7 +41,7 @@ def analyze_input(state:State):
         del state['messages'][10:]
         print('raised state overflow:',len(state['messages']))
         print('*'*80)
-    return {**state, 'next':intent }
+    return {'next':intent }
   return state
 
 def get_table_names(state:State):
@@ -69,11 +69,10 @@ def get_table_names(state:State):
       'next':'check_reply'
     }
   return {
-    **state,
-    'messages':[],
     'schema': schema,
     'next': 'query'
   }
+
 
 def get_query(state:State):
   last_message = state["messages"][-1]
@@ -96,7 +95,14 @@ def get_query(state:State):
   return get_extended_query(state) 
 
 def get_extended_query(state: State):
-  return {'messages':[llm.invoke(state["messages"])]}
+  items=state['messages']
+  idx=0
+  for it in reversed(items):
+     idx +=1
+     if isinstance(it, SystemMessage):
+        break
+  items=items[-idx:]
+  return {'messages':[llm.invoke(items)]}
 
 
 graph_builder = StateGraph(State)
@@ -134,7 +140,7 @@ def get_messages(thread_id):
    messages=current_state.values['messages']
    messages=[msg for msg in messages if not (isinstance(msg, SystemMessage) or msg.content.strip().startswith('Given this database schema:'))]
    res=[]
-   #{ id: 1, text: "Hello! How can I help you today?", sender: "bot", timestamp: new Date() }
+   
    for msg in messages:
       if isinstance(msg, HumanMessage):
         res.append({'text':msg.content, 'sender': 'user' })
