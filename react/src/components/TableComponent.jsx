@@ -343,7 +343,7 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query, ite
             {currentPageData.map((row, rowIndex) => (
               <tr key={row[currentColumns[0]] + rowIndex} className="hover:bg-gray-50">
                 {currentColumns.map((col, idx) => (
-                  <td key={columns[idx]} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {row[col] || '-'} 
                   </td>
                 ))}
