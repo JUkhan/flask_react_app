@@ -2,13 +2,14 @@ from flask import Flask, request, jsonify, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+
 import os
 import logging
 
 app = Flask(__name__)
 
 # Database configuration
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://flask_user:your_password@localhost:5432/flask_app')
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgresql@localhost:5432/flask_app')
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

@@ -16,6 +16,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gen_sql.schema import  get_schema, extract_table_names, filter_schemas_by_table_names
 load_dotenv()
 
+db_system=os.getenv('DB_SYSTEM', 'sqlite')
+
 class State(TypedDict):
   messages: Annotated[Sequence[BaseMessage], add_messages]
   schema: str
@@ -84,7 +86,7 @@ def get_query(state:State):
     ```
     {state.get('schema')}
     ```                           
-    Generate a SQL query for sqlite3 using the following query description:
+    Generate a SQL query for {db_system} using the following query description:
     {last_message.content}
 
     When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name.
@@ -132,6 +134,7 @@ graph_builder.add_edge('query', END)
 graph = graph_builder.compile(checkpointer=InMemorySaver())
 
 def get_messages(thread_id):
+   print('db_system: ', db_system)
    if not thread_id:
         return []
    print(thread_id)
@@ -173,8 +176,8 @@ def run_qgn_chatbot(user_input, thread_id):
     print("len:", len(response["messages"]))
     return response["messages"][-1].content
 
-def extract(text, substr='sqlite'):
-    json_regex = rf'```{substr}\s*([\s\S]*?)\s*```'
+def extract(text):
+    json_regex = r'```(?:sqlite|sql)\s*([\s\S]*?)\s*```'
     match = re.search(json_regex, text)
     
     if not match:

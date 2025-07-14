@@ -19,6 +19,7 @@ print('api key::', os.getenv("GOOGLE_API_KEY"))
 app = Flask(__name__)
 
 # Configure SQLAlchemy
+#DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgresql@localhost:5432/flask_app')
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "database.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -461,7 +462,7 @@ def get_query_result():
         
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {'error': str(e)}, 500
+        return {'error': str(e), 'query': sql, 'data': []}, 200
     
 @app.route("/api/get-query-result2", methods=['POST'])
 def get_query_result2():
@@ -481,7 +482,7 @@ def get_query_result2():
         
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {'error': str(e)}, 500
+        return {'error': str(e), 'data':[]}, 200
 
 
 # HTML Template

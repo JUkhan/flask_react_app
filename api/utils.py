@@ -38,7 +38,7 @@ def extract_sql(text):
     Returns:
         tuple: (success: bool, data: dict/list/None, error: str/None)
     """
-    json_regex = r'```sqlite\s*([\s\S]*?)\s*```'
+    json_regex = r'```(?:sqlite|sql)\s*([\s\S]*?)\s*```'
     match = re.search(json_regex, text)
     
     if not match:
