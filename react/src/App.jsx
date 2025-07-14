@@ -13,8 +13,8 @@ import {
 } from '@tanstack/react-router';
 
 import HomePage from './components/HomePage';
-import CounterPage from './components/CounterPage';
-import Counter2Page from './components/Counter2Page';
+// import CounterPage from './components/CounterPage';
+// import Counter2Page from './components/Counter2Page';
 import DashboardPage from './components/DashboardPage';
 import LoginPage from './components/LoginPage';
 import Chat from './components/chat';
@@ -41,7 +41,7 @@ function RootComponent() {
                 >
                   Home
                 </Link>
-                <Link 
+                {/* <Link 
                   to="/counter1" 
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                   activeProps={{ className: "text-blue-600 bg-blue-50" }}
@@ -54,7 +54,7 @@ function RootComponent() {
                   activeProps={{ className: "text-blue-600 bg-blue-50" }}
                 >
                   Counter2
-                </Link>
+                </Link> */}
                 <Link 
                   to="/dashboard" 
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
@@ -99,17 +99,17 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
-const aboutRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/counter1',
-  component: CounterPage,
-});
+// const aboutRoute = createRoute({
+//   getParentRoute: () => rootRoute,
+//   path: '/counter1',
+//   component: CounterPage,
+// });
 
-const usersRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/counter2',
-  component: Counter2Page,
-});
+// const usersRoute = createRoute({
+//   getParentRoute: () => rootRoute,
+//   path: '/counter2',
+//   component: Counter2Page,
+// });
 
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -127,8 +127,8 @@ const LoginRoute = createRoute({
 // Create route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  aboutRoute,
-  usersRoute,
+  // aboutRoute,
+  // usersRoute,
   dashboardRoute,
   LoginRoute
 ]);
