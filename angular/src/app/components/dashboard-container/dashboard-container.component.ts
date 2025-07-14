@@ -134,7 +134,8 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
             console.log('Component saved to server:', response);
             // Update the component with server-generated ID
             const updatedComponent = { ...newComponent, id: response.dashboard.id };
-            this.dashboardService.updateComponent(updatedComponent);
+            this.dashboardService.removeComponent(newComponent.id);
+            this.dashboardService.addComponent(updatedComponent);
           },
           error: (error) => {
             console.error('Error saving component:', error);
