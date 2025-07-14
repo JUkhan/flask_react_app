@@ -285,6 +285,7 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query, ite
     currentPage * itemsPerPage
   );
   
+  
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -340,9 +341,9 @@ const TableComponent = ({ id, title, onRemove, onEdit, columns, data, query, ite
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentPageData.map((row, rowIndex) => (
-              <tr key={row[currentColumns[0]] || rowIndex} className="hover:bg-gray-50">
-                {currentColumns.map((col, index) => (
-                  <td key={index} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <tr key={row[currentColumns[0]] + rowIndex} className="hover:bg-gray-50">
+                {currentColumns.map((col, idx) => (
+                  <td key={columns[idx]} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {row[col] || '-'} 
                   </td>
                 ))}

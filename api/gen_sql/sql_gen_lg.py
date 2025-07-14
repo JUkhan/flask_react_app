@@ -79,7 +79,7 @@ def get_table_names(state:State):
 
 def get_query(state:State):
   last_message = state["messages"][-1]
-  
+  print('getQuery:::')
   system_message = SystemMessage(content="you are my assistant, please answer my question to the best of your ability.")
   human_message = HumanMessage(content=f"""
     Given this database schema:
@@ -173,7 +173,7 @@ def run_qgn_chatbot(user_input, thread_id):
     user_message = HumanMessage(content=user_input)
     initial_state["messages"].append(user_message)
     response = graph.invoke(initial_state, config=config)
-    print("len:", len(response["messages"]))
+    print("len:", len(response["messages"]), 'last content:',response["messages"][-1].content)
     return response["messages"][-1].content
 
 def extract(text):
