@@ -4,7 +4,10 @@ import { setTypesAndData, type SComponent } from './appStore';
 
 export function takeDecision({ data, query }: { data: any[], query: string }) {
   // Handle empty data
-  if (!data || data.length === 0) return;
+  if (!data || data.length === 0) {
+    setTypesAndData([], [], query, []);
+    return;
+  }
 
   // Get columns from first object
   let columns = Object.keys(data[0]);
@@ -43,7 +46,7 @@ export function takeDecision({ data, query }: { data: any[], query: string }) {
   else if (acc['number'] > 1) {
     setTypesAndData(['line', 'table'], data, query, columns);
   } else if (acc['number'] === 1) {
-    setTypesAndData(['bar', 'pie', 'donut', 'table'], data, query, columns);
+    setTypesAndData(['bar', 'pie', 'donut', 'line', 'table'], data, query, columns);
   } else {
     setTypesAndData(['table'], data, query, columns);
   }

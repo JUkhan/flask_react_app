@@ -753,4 +753,4 @@ if __name__ == '__main__':
         db.create_all()
     
     # Run Flask app
-    app.run(debug=True, port=5000)
+    app.run(debug=False, use_reloader=False, host='0.0.0.0', port=5000)
