@@ -33,6 +33,7 @@ def analyze_input(state:State):
   if not state["messages"]:
     return state      
   last_message = state["messages"][-1]
+  last_message.content=re.sub(r'(?:remove|delete)', 'exclude', last_message.content, flags=re.IGNORECASE | re.MULTILINE)
   if isinstance(last_message, HumanMessage):
     content = last_message.content.lower()
     intent = 'extended_query'
