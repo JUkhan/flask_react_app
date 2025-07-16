@@ -25,7 +25,7 @@ interface DashboardState {
 })
 export class DashboardService {
   private baseUrl = '/api';
-  
+
   private dashboardState = new BehaviorSubject<DashboardState>({
     components: [],
     types: [],
@@ -66,7 +66,7 @@ export class DashboardService {
     const currentState = this.dashboardState.value;
     this.dashboardState.next({
       ...currentState,
-      components: currentState.components.map(comp => 
+      components: currentState.components.map(comp =>
         comp.id === updatedComponent.id ? updatedComponent : comp
       )
     });
@@ -110,17 +110,21 @@ export class DashboardService {
 
   takeDecision(response: { data: any[], query: string }): void {
     const { data, query } = response;
-    
+
     // Handle empty data
-    if (!data || data.length === 0) return;
+    if (!data || data.length === 0) {
+      console.warn('No data returned from the query.');
+      this.setTypesAndData([], [], query, []);
+      return;
+    }
 
     // Get columns from first object
     let columns = Object.keys(data[0]);
     let namedColumn = '';
     const acc = columns.reduce((acc, col) => {
-      if (typeof data[0][col] === 'string' || 
-          (data[0][col] instanceof Date || 
-           (typeof data[0][col] === 'string' && !isNaN(Date.parse(data[0][col]))))) {
+      if (typeof data[0][col] === 'string' ||
+        (data[0][col] instanceof Date ||
+          (typeof data[0][col] === 'string' && !isNaN(Date.parse(data[0][col]))))) {
         if (acc['string']) {
           acc['string'] += 1;
         } else {
@@ -142,17 +146,17 @@ export class DashboardService {
       }
       return acc;
     }, {} as Record<string, any>);
-    
+
     console.log('Columns:', acc);
     columns = columns.filter(col => col !== namedColumn);
     columns.unshift(namedColumn);
-    
+
     if (acc['string'] > 1 || acc['unknown'] > 0) {
       this.setTypesAndData(['table'], data, query, columns);
     } else if (acc['number'] > 1) {
       this.setTypesAndData(['line', 'table'], data, query, columns);
     } else if (acc['number'] === 1) {
-      this.setTypesAndData(['bar', 'pie', 'donut', 'table'], data, query, columns);
+      this.setTypesAndData(['bar', 'pie', 'donut', 'line', 'table'], data, query, columns);
     } else {
       this.setTypesAndData(['table'], data, query, columns);
     }

@@ -1,9 +1,11 @@
-import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy } from '@angular/core';
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ChatService, Message } from '../../services/chat.service';
 import { DashboardService } from '../../services/dashboard.service';
+import { SpeechRecognitionService } from '../../services/speech-recognition.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-chat',
@@ -12,7 +14,7 @@ import { DashboardService } from '../../services/dashboard.service';
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css']
 })
-export class ChatComponent implements OnInit, AfterViewChecked {
+export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
 
   isOpen = false;
@@ -22,12 +24,26 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   inputValue = '';
   isTyping = false;
   isLoading = false;
+  private transcriptSubscription: Subscription;
+  private errorSubscription: Subscription;
 
   constructor(
     private chatService: ChatService,
     private dashboardService: DashboardService,
-    private router: Router
-  ) { }
+    private router: Router,
+    public speechRecognitionService: SpeechRecognitionService
+  ) {
+    this.transcriptSubscription = this.speechRecognitionService.transcript$.subscribe(
+      transcript => {
+        this.inputValue = transcript;
+      }
+    );
+    this.errorSubscription = this.speechRecognitionService.error$.subscribe(
+      error => {
+        console.error(error);
+      }
+    );
+  }
 
   ngOnInit(): void {
     this.loadChatHistory();
@@ -150,5 +166,18 @@ export class ChatComponent implements OnInit, AfterViewChecked {
 
   formatTime(date: Date): string {
     return formatDate(date, 'shortTime', 'en-US');
+  }
+
+  toggleListening() {
+    if (this.speechRecognitionService.isListening) {
+      this.speechRecognitionService.stop();
+    } else {
+      this.speechRecognitionService.start();
+    }
+  }
+
+  ngOnDestroy() {
+    this.transcriptSubscription.unsubscribe();
+    this.errorSubscription.unsubscribe();
   }
 }
