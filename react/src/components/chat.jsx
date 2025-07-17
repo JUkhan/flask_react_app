@@ -1,9 +1,13 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useState, useRef, useEffect } from 'react';
 import {takeDecision} from "./Search"
-import { MicIcon, SignalHighIcon, Loader2Icon } from 'lucide-react';
+import { MicIcon, SignalHighIcon, Loader2Icon, BarChart3, TrendingUp, DonutIcon, PieChart as PieChartIcon, Grid3X3 } from 'lucide-react';
 import { useSpeechRecognition } from './useSpeechRecognition';
-
+import { useDashboardStore, addComponentState, setDashboardState } from './appStore';
+import TableComponent from './TableComponent';
+import LineChartComponent from './LineChartComponent';
+import BarChartComponent from './BarChartComponent';
+import PieChartComponent from './PieChartComponent';
 
 export default function ChatPopup() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +19,7 @@ export default function ChatPopup() {
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const [isLoading, setLoading] = useState(false);
-
+  const dashboard = useDashboardStore();
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -82,6 +86,7 @@ export default function ChatPopup() {
         takeDecision(data);
         botResponse.text = data.query?data.query:'Your query description is not sufficient to generate a valid query.';
         botResponse.timestamp = new Date();
+        botResponse.hasSql = data.query? (data.query.startsWith('SELECT') || data.query.startsWith('select')): false;
         setMessages(prev => [...prev, botResponse]);
         setIsTyping(false);})
       .catch(error => {
@@ -138,6 +143,71 @@ export default function ChatPopup() {
       setError(`Failed to ${isListening ? 'stop' : 'start'} speech recognition: ${err.message}`);
     }
   };
+
+  const componentTypes=dashboard.types.reduce((acc, type) => {
+    switch (type) {
+      case 'line': 
+        acc.push({ type: 'line', name: 'Line Chart', icon: TrendingUp, component: LineChartComponent, defaultTitle: 'Line Chart' });
+        break;
+      case 'bar':
+        acc.push({ type: 'bar', name: 'Bar Chart', icon: BarChart3, component: BarChartComponent, defaultTitle: 'Bar Chart' });
+        break;
+      case 'pie':
+        acc.push({ type: 'pie', name: 'Pie Chart', icon: PieChartIcon, component: PieChartComponent, defaultTitle: 'Pie Chart' });
+        break;  
+         case 'donut':
+        acc.push({ type: 'donut', name: 'Donut Chart', icon: DonutIcon, component: PieChartComponent, defaultTitle: 'Donut Chart' });
+        break;  
+      case 'table':
+        acc.push({ type: 'table', name: 'Table', icon: Grid3X3, component: TableComponent, defaultTitle: 'Table' });
+        break;
+    }
+    return acc;
+  },[])
+
+  const addComponent = (type) => () => {
+    console.log('Adding component:', type);
+    const component = componentTypes.find(c => c.type === type);
+    console.log('Component found:', component);
+    if (!component) return;
+    const newComponent = {
+      id: Number(new Date().getTime()), 
+        type: type,
+        title: component.defaultTitle,
+        component: component.component,
+        data: dashboard.data,
+        query: dashboard.query || '',
+        columns: dashboard.columns,
+        user_id: sessionStorage.getItem('userId') || '',
+    };
+    addComponentState(newComponent);
+    if(newComponent.user_id) {
+            const copyComponent = { ...newComponent };
+            copyComponent.columns = copyComponent.columns.join(',');
+            delete copyComponent.component; 
+            delete copyComponent.data;
+            fetch('/api/dashboard', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(copyComponent),
+            })
+            .then(response => response.json())
+            .then(data => data.dashboard)
+            .then(data => {
+              console.log('New component ID:', data.id, newComponent.id);
+              let components=dashboard.components.filter(comp => comp.id !== newComponent.id);
+              components.unshift({ ...newComponent, id: data.id });
+              console.log('Updated components:', components);
+              setDashboardState({ components });
+              console.log('Component added successfully:', data);
+            })
+            .catch(error => {
+              console.error('Error adding component:', error);
+            });
+          }
+  }
 
   return (
     <div className={`fixed top-4 right-4 ${isOpen?'z-50':''}`}>
@@ -204,10 +274,10 @@ export default function ChatPopup() {
                 className={`max-w-xs px-4 py-2 rounded-lg ${
                   message.sender === 'user'
                     ? 'bg-blue-500 text-white rounded-br-none'
-                    : 'bg-gray-200 text-gray-800 rounded-bl-none relative group'
+                    : 'bg-blue-200 text-gray-800 rounded-bl-none relative group'
                 }`}
               >
-                {message.hasSql ?<button
+                {message.hasSql && message.text!==dashboard.query ?<button
                 disabled={isLoading}
           onClick={() => loadSqlData(message.text)}
           title='Click to load data'
@@ -215,7 +285,17 @@ export default function ChatPopup() {
         >
           {isLoading?<Loader2Icon className={` w-4 h-4`}/>:<SignalHighIcon className={` w-4 h-4`} />}
         </button>:null}
-                <p className="text-sm">{message.text}</p>
+                <div className="text-sm">
+                {message.hasSql && message.text==dashboard.query?
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {componentTypes.map(({type, name, icon:Icon}) => (
+                      <button onClick={addComponent(type)} key={type} className={` px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors`}>
+                        <Icon className="w-4 h-4 inline-block mr-1" />
+                        {name}
+                      </button>))}
+                  </div>:
+                <span>{message.text}</span>}
+                </div>
                 <p className={`text-xs mt-1 ${
                   message.sender === 'user' ? 'text-blue-200' : 'text-gray-500'
                 }`}>

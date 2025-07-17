@@ -75,8 +75,8 @@ export class BarChartComponent implements OnInit, OnChanges {
       datasets.push({
         data: values,
         label: column,
-        backgroundColor: this.generateColors(values.length, 0.6),
-        borderColor: this.generateColors(values.length, 1),
+        backgroundColor: this.dashboardService.generateColors(values.length, 0.6),
+        borderColor: this.dashboardService.generateColors(values.length, 1),
         borderWidth: 1
       });
     }
@@ -86,23 +86,6 @@ export class BarChartComponent implements OnInit, OnChanges {
       datasets: datasets
     };
     console.log('Bar Chart Data:', this.barChartData);
-  }
-
-  private generateColors(count: number, alpha: number): string[] {
-    const baseColors = [
-      `rgba(54, 162, 235, ${alpha})`,   // Blue
-      `rgba(255, 99, 132, ${alpha})`,   // Red
-      `rgba(255, 205, 86, ${alpha})`,   // Yellow
-      `rgba(75, 192, 192, ${alpha})`,   // Green
-      `rgba(153, 102, 255, ${alpha})`,  // Purple
-      `rgba(255, 159, 64, ${alpha})`    // Orange
-    ];
-
-    const colors = [];
-    for (let i = 0; i < count; i++) {
-      colors.push(baseColors[i % baseColors.length]);
-    }
-    return colors;
   }
 
   handleRemove(): void {

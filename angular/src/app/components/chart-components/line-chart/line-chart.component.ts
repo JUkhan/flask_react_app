@@ -47,6 +47,7 @@ export class LineChartComponent implements OnInit, OnChanges {
   public lineChartType: ChartType = 'line';
 
   ngOnInit(): void {
+
     this.updateChartData();
     if (this.data && this.data.length === 0) {
       this.dashboardService.getQueryResult2(this.query || '').subscribe(res => {
@@ -95,15 +96,35 @@ export class LineChartComponent implements OnInit, OnChanges {
   }
 
   private getColor(index: number, alpha: number): string {
-    const colors = [
+    const baseColors = [
       `rgba(54, 162, 235, ${alpha})`,   // Blue
       `rgba(255, 99, 132, ${alpha})`,   // Red
       `rgba(255, 205, 86, ${alpha})`,   // Yellow
       `rgba(75, 192, 192, ${alpha})`,   // Green
       `rgba(153, 102, 255, ${alpha})`,  // Purple
-      `rgba(255, 159, 64, ${alpha})`    // Orange
+      `rgba(255, 159, 64, ${alpha})`,   // Orange
+      `rgba(255, 20, 147, ${alpha})`,   // Deep Pink
+      `rgba(0, 191, 255, ${alpha})`,    // Deep Sky Blue
+      `rgba(50, 205, 50, ${alpha})`,    // Lime Green
+      `rgba(255, 140, 0, ${alpha})`,    // Dark Orange
+      `rgba(147, 112, 219, ${alpha})`,  // Medium Purple
+      `rgba(255, 69, 0, ${alpha})`,     // Red Orange
+      `rgba(0, 255, 255, ${alpha})`,    // Cyan
+      `rgba(255, 192, 203, ${alpha})`,  // Pink
+      `rgba(124, 252, 0, ${alpha})`,    // Lawn Green
+      `rgba(255, 0, 255, ${alpha})`,    // Magenta
+      `rgba(255, 215, 0, ${alpha})`,    // Gold
+      `rgba(64, 224, 208, ${alpha})`,   // Turquoise
+      `rgba(255, 105, 180, ${alpha})`,  // Hot Pink
+      `rgba(32, 178, 170, ${alpha})`,   // Light Sea Green
+      `rgba(255, 99, 71, ${alpha})`,    // Tomato
+      `rgba(138, 43, 226, ${alpha})`,   // Blue Violet
+      `rgba(255, 127, 80, ${alpha})`,   // Coral
+      `rgba(0, 128, 128, ${alpha})`,    // Teal
+      `rgba(255, 182, 193, ${alpha})`,  // Light Pink
+      `rgba(72, 61, 139, ${alpha})`     // Dark Slate Blue
     ];
-    return colors[index % colors.length];
+    return baseColors[index % baseColors.length];
   }
 
   handleRemove(): void {

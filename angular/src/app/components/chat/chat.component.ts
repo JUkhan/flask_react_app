@@ -6,11 +6,16 @@ import { ChatService, Message } from '../../services/chat.service';
 import { DashboardService } from '../../services/dashboard.service';
 import { SpeechRecognitionService } from '../../services/speech-recognition.service';
 import { Subscription } from 'rxjs';
+import { LucideAngularModule, SignalHighIcon, Loader2Icon, BarChart3, TrendingUp, DonutIcon, PieChart, Grid3X3 } from 'lucide-angular';
+import { TableComponentComponent } from '../table-component/table-component.component';
+import { LineChartComponent } from '../chart-components/line-chart/line-chart.component';
+import { BarChartComponent } from '../chart-components/bar-chart/bar-chart.component';
+import { PieChartComponent } from '../chart-components/pie-chart/pie-chart.component';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css']
 })
@@ -26,7 +31,18 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   isLoading = false;
   private transcriptSubscription: Subscription;
   private errorSubscription: Subscription;
-
+  get components() {
+    return this.dashboardService.dashboardState.value.types.map(type => {
+      switch (type) {
+        case 'bar': return { type: 'bar', icon: BarChart3, name: 'Bar Chart', component: BarChartComponent };
+        case 'line': return { type: 'line', icon: TrendingUp, name: 'Line Chart', component: LineChartComponent };
+        case 'pie': return { type: 'pie', icon: PieChart, name: 'Pie Chart', component: PieChartComponent };
+        case 'donut': return { type: 'donut', icon: DonutIcon, name: 'Donut Chart', component: PieChartComponent };
+        case 'table': return { type: 'table', icon: Grid3X3, name: 'Table', component: TableComponentComponent };
+        default: return { type: 'unknown', icon: BarChart3, name: 'Unknown', component: null };
+      }
+    })
+  }
   constructor(
     private chatService: ChatService,
     private dashboardService: DashboardService,
@@ -176,6 +192,48 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
+  get query(): string {
+    return this.dashboardService.dashboardState.value.query || '';
+  }
+  addComponent(type: string): void {
+    console.log('Adding component of type:', type);
+    const componentType = this.components.find(ct => ct.type === type);
+    const dashboard = this.dashboardService.getDashboard();
+    if (componentType && dashboard.columns.length > 0) {
+      const newComponent = {
+        id: Number(new Date().getTime()),
+        type: type as any,
+        title: componentType.name,
+        query: dashboard.query || '',
+        data: dashboard.data,
+        columns: dashboard.columns,
+        user_id: sessionStorage.getItem('userId') || ''
+      };
+
+      console.log('Adding new component:', newComponent);
+      this.dashboardService.addComponent(newComponent);
+
+      // Save to server if user is logged in
+      if (newComponent.user_id) {
+        const serverComponent = { ...newComponent };
+        (serverComponent as any).columns = (serverComponent.columns || []).join(',');
+        delete (serverComponent as any).data;
+
+        this.dashboardService.createDashboardComponent(serverComponent).subscribe({
+          next: (response) => {
+            console.log('Component saved to server:', response);
+            // Update the component with server-generated ID
+            const updatedComponent = { ...newComponent, id: response.dashboard.id };
+            this.dashboardService.removeComponent(newComponent.id);
+            this.dashboardService.addComponent(updatedComponent);
+          },
+          error: (error) => {
+            console.error('Error saving component:', error);
+          }
+        });
+      }
+    }
+  }
   ngOnDestroy() {
     this.transcriptSubscription.unsubscribe();
     this.errorSubscription.unsubscribe();

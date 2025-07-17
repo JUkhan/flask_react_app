@@ -70,7 +70,7 @@ export class PieChartComponent implements OnInit, OnChanges {
       labels: labels,
       datasets: [{
         data: values,
-        backgroundColor: this.generateColors(values.length),
+        backgroundColor: this.dashboardService.generateColors(values.length, 0.7),
         borderColor: '#ffffff',
         borderWidth: 2
       }]
@@ -82,22 +82,7 @@ export class PieChartComponent implements OnInit, OnChanges {
     }
   }
 
-  private generateColors(count: number): string[] {
-    const colors = [
-      '#FF6384', // Red
-      '#36A2EB', // Blue
-      '#FFCE56', // Yellow
-      '#4BC0C0', // Teal
-      '#9966FF', // Purple
-      '#FF9F40', // Orange
-      '#FF6384', // Pink
-      '#C9CBCF', // Grey
-      '#4BC0C0', // Cyan
-      '#FF9F40'  // Light Orange
-    ];
 
-    return colors.slice(0, count);
-  }
 
   handleRemove(): void {
     this.onRemove.emit(this.id);
