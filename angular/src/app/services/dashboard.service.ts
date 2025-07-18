@@ -12,7 +12,7 @@ export interface SComponent {
   user_id?: any;
 }
 
-interface DashboardState {
+export interface DashboardState {
   components: SComponent[];
   types: string[];
   data: any[];

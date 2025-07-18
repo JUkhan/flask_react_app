@@ -1,9 +1,9 @@
-import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ChatService, Message } from '../../services/chat.service';
-import { DashboardService } from '../../services/dashboard.service';
+import { DashboardService, DashboardState } from '../../services/dashboard.service';
 import { SpeechRecognitionService } from '../../services/speech-recognition.service';
 import { Subscription } from 'rxjs';
 import { LucideAngularModule, SignalHighIcon, Loader2Icon, BarChart3, TrendingUp, DonutIcon, PieChart, Grid3X3 } from 'lucide-angular';
@@ -31,8 +31,16 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   isLoading = false;
   private transcriptSubscription: Subscription;
   private errorSubscription: Subscription;
-  get components() {
-    return this.dashboardService.dashboardState.value.types.map(type => {
+  dashboardState = signal<DashboardState>({
+    components: [],
+    query: '',
+    data: [],
+    columns: [],
+    types: [],
+    error: null
+  });
+  components = computed(() => {
+    return this.dashboardState().types.map((type: string) => {
       switch (type) {
         case 'bar': return { type: 'bar', icon: BarChart3, name: 'Bar Chart', component: BarChartComponent };
         case 'line': return { type: 'line', icon: TrendingUp, name: 'Line Chart', component: LineChartComponent };
@@ -42,10 +50,12 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         default: return { type: 'unknown', icon: BarChart3, name: 'Unknown', component: null };
       }
     })
-  }
-  get error() {
-    return this.dashboardService.dashboardState.value.error;
-  }
+  });
+  error = computed(() => this.dashboardState().error);
+  
+
+  query: string = '';
+
   constructor(
     private chatService: ChatService,
     private dashboardService: DashboardService,
@@ -66,6 +76,10 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   ngOnInit(): void {
     this.loadChatHistory();
+    this.dashboardService.dashboardState.subscribe(state => {
+      this.dashboardState.set(state);
+      this.query = state.query;
+    });
   }
 
   ngAfterViewChecked(): void {
@@ -191,12 +205,9 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  get query(): string {
-    return this.dashboardService.dashboardState.value.query || '';
-  }
   addComponent(type: string): void {
     console.log('Adding component of type:', type);
-    const componentType = this.components.find(ct => ct.type === type);
+    const componentType = this.components().find((ct: any) => ct.type === type);
     const dashboard = this.dashboardService.getDashboard();
     if (componentType && dashboard.columns.length > 0) {
       const newComponent = {
