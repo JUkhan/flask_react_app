@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {takeDecision} from "./Search"
 import { MicIcon, SignalHighIcon, Loader2Icon, BarChart3, TrendingUp, DonutIcon, PieChart as PieChartIcon, Grid3X3 } from 'lucide-react';
 import { useSpeechRecognition } from './useSpeechRecognition';
@@ -12,7 +12,7 @@ import PieChartComponent from './PieChartComponent';
 export default function ChatPopup() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { id: 1, text: "Hello! How can I help you today?", sender: "bot", timestamp: new Date() }
+    { id: 1, text: "Hello! How can I help you today?", sender: "bot", timestamp: new Date(), error: '', hasSql: false }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -91,6 +91,7 @@ export default function ChatPopup() {
         setIsTyping(false);})
       .catch(error => {
         console.error('Error fetching bot response:', error);
+        takeDecision(error);
         setIsTyping(false);
       });
     
@@ -114,6 +115,8 @@ export default function ChatPopup() {
     })
     .catch(error => {
       setLoading(false);
+      error.query = sql;
+      takeDecision(error);
       console.error('Error fetching SQL data:', error);
     });
   };
@@ -287,14 +290,18 @@ export default function ChatPopup() {
         </button>:null}
                 <div className="text-sm">
                 {message.hasSql && message.text==dashboard.query?
+                <React.Fragment>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {componentTypes.map(({type, name, icon:Icon}) => (
                       <button onClick={addComponent(type)} key={type} className={` px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors`}>
                         <Icon className="w-4 h-4 inline-block mr-1" />
                         {name}
                       </button>))}
-                  </div>:
-                <span>{message.text}</span>}
+                  </div>
+                  {componentTypes.length==0 && dashboard.error?
+                  <div className="text-red-500">{dashboard.error}</div>:null}
+                  </React.Fragment>:
+                <span>{message.text||message.error}</span>}
                 </div>
                 <p className={`text-xs mt-1 ${
                   message.sender === 'user' ? 'text-blue-200' : 'text-gray-500'

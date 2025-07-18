@@ -30,7 +30,8 @@ interface DashboardState {
   types: string[];
   data: any[];
   columns: string[];
-  query: string; // Optional query for the dashboard
+  query: string;
+  error: string;
 }
 const dashboard = new Store<DashboardState>({
   components: [],
@@ -38,6 +39,7 @@ const dashboard = new Store<DashboardState>({
   data: [],
   columns: [],
   query: '',
+  error: ''
 })
 
 export const useDashboardStore = () => {
@@ -67,9 +69,10 @@ export const updateComponentState = (updatedComponent: SComponent) => {
   }))
 }
 
-export const setTypesAndData = (types: string[], data: any[], query: string, columns: string[]) => {
+export const setTypesAndData = (types: string[], data: any[], query: string, columns: string[], error = '') => {
   dashboard.setState((prev) => ({
     ...prev,
-    types, data, query, columns
+    types, data, query, columns, error
   }))
 }
+

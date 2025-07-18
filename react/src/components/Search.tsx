@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Search, X, Filter, ArrowUpDown, LoaderCircle } from 'lucide-react';
 import { setTypesAndData, type SComponent } from './appStore';
 
-export function takeDecision({ data, query }: { data: any[], query: string }) {
+export function takeDecision({ data, query, error }: { data: any[], query: string, error?: string }) {
   // Handle empty data
-  if (!data || data.length === 0) {
-    setTypesAndData([], [], query, []);
+  if (!data || data.length === 0 || error) {
+    setTypesAndData([], [], query, [], error || 'No data found for the given query');
     return;
   }
 

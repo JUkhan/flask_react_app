@@ -1,6 +1,6 @@
 import os
 import re
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from typing import Annotated, Sequence
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -14,7 +14,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gen_sql.schema import  get_schema, extract_table_names, filter_schemas_by_table_names
-load_dotenv()
+#load_dotenv()
 
 db_system=os.getenv('DB_SYSTEM', 'sqlite')
 

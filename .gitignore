@@ -27,6 +27,9 @@ api/__pycache__/
 api/gen_sql/__pycache__/
 api/yolo11n.pt
 api/static/
+api/models/__pycache__/
+api/routes/__pycache__/
+api/schema_readers/__pycache__/
 react/node_modules/
 react/dist/
 react/dist-ssr/
@@ -43,3 +46,4 @@ angular/.idea/
 angular/.vscode/*
 angular/.vscode/extensions.json
 angular/.vscode/settings.json
+

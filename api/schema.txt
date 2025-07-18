@@ -6,8 +6,8 @@ Description: Represents customers data in the system.
         registration_date (DATE)
         last_login (DATETIME)
 
-Table: dashboard
-Description: Represents dashboard data in the system.
+Table: dashboard_gen_core
+Description: Represents dashboard gen core data in the system.
         id (INTEGER, Primary Key)
         title (VARCHAR(200), Not Null)
         type (TEXT, Not Null)
@@ -32,14 +32,6 @@ Description: Represents orders data in the system.
         total_amount (NUMERIC)
         status (VARCHAR)
 
-Table: post
-Description: Represents post data in the system.
-        id (INTEGER, Primary Key)
-        title (VARCHAR(200), Not Null)
-        content (TEXT, Not Null)
-        created_at (DATETIME)
-        user_id (INTEGER, Not Null, Foreign Key -> user.id)
-
 Table: products
 Description: Represents products data in the system.
         product_id (INTEGER, Primary Key)
@@ -49,8 +41,8 @@ Description: Represents products data in the system.
         category (VARCHAR)
         stock_quantity (INTEGER)
 
-Table: user
-Description: Represent user in the system
+Table: user_gen_core
+Description: Represents user gen core data in the system.
         id (INTEGER, Primary Key)
         username (VARCHAR(80), Not Null, Unique)
         email (VARCHAR(120), Not Null, Unique)

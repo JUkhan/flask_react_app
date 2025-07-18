@@ -1,0 +1,113 @@
+from flask import Flask, request, jsonify
+from api2 import app, db
+from models.sample_model import User
+from models import Dashboard
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """login user authentication"""
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    users = User.query.all()
+    for user in users:
+        if user.username==username:
+            return jsonify(user.to_dict())
+    return jsonify(None)
+
+
+# dashboard crud
+@app.route('/api/dashboard', methods=['POST'])
+def create_dashboard():
+    try:
+        data = request.get_json()
+       
+        # Create new user
+        new_dashboard = Dashboard(
+            title= data['title'],
+            type= data['type'],
+            query=data['query'],
+            columns=data['columns'],
+            user_id=data['user_id']
+        )
+        
+        db.session.add(new_dashboard)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Dashboard created successfully',
+            'dashboard': new_dashboard.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# READ - Get all users
+@app.route('/api/dashboards/<int:user_id>', methods=['GET'])
+def get_dashboards(user_id):
+    print('user-id:',user_id)
+    try:
+        dashboards = db.session.query(Dashboard).filter_by(user_id=user_id).order_by(Dashboard.created_at.desc()).all()
+        dashboards = [das.to_dict() for das in dashboards]
+
+        return jsonify({'data':dashboards}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# READ - Get a single user by ID
+@app.route('/api/dashboard/<int:dashboard_id>', methods=['GET'])
+def get_dashboard(dashboard_id):
+    try:
+        dashboard = Dashboard.query.get(dashboard_id)
+        if not dashboard:
+            return jsonify({'error': 'User not found'}), 404
+        
+        return jsonify({'dashboard':dashboard.to_dict()}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# UPDATE - Update a user
+@app.route('/api/dashboard/<int:dashboard_id>', methods=['PUT'])
+def update_dashboard(dashboard_id):
+    try:
+        dashboard = db.session.query(Dashboard).get(dashboard_id)
+        if not dashboard:
+            return jsonify({'error': 'Dashboard not found'}), 404
+        
+        data = request.get_json()
+        
+        # Update fields if provided
+        
+        if 'title' in data:
+            dashboard.title=data['title']
+        if 'columns' in data:
+            dashboard.columns=data['columns']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Dashboard updated successfully',
+            'dashboard': dashboard.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# DELETE - Delete a user
+@app.route('/api/dashboard/<int:dashboard_id>', methods=['DELETE'])
+def delete_dashboard(dashboard_id):
+    try:
+        user = db.session.query(Dashboard).get(dashboard_id)
+        if not user:
+            return jsonify({'error': 'Dashboard not found'}), 404
+        
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({'message': 'Dashboard deleted successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
