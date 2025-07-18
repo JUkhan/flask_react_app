@@ -143,7 +143,12 @@
             </svg>
           </button>
           <div class="text-sm">
-            <ng-container *ngIf="message.hasSql && message.text === query">
+            <ng-container
+              *ngIf="
+                message.hasSql && message.text === query;
+                else showMessageText
+              "
+            >
               <div class="flex flex-wrap gap-2 mb-2">
                 <button
                   *ngFor="let component of components"
@@ -157,10 +162,35 @@
                   {{ component.name }}
                 </button>
               </div>
+              <div
+                *ngIf="components.length === 0 && error"
+                class="text-red-500"
+              >
+                {{ error }}
+              </div>
+            </ng-container>
+            <ng-template #showMessageText>
+              <span>{{ message.text }}</span>
+            </ng-template>
+            <!-- <ng-container *ngIf="message.hasSql && message.text === query">
+              <div class="flex flex-wrap gap-2 mb-2">
+                <button
+                  *ngFor="let component of components"
+                  (click)="addComponent(component.type)"
+                  class="px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors"
+                >
+                  <lucide-angular
+                    [img]="component.icon"
+                    class="w-4 h-4 inline-block mr-1"
+                  />
+                  {{ component.name }}
+                </button>
+              </div>
+
             </ng-container>
             <ng-container *ngIf="message.hasSql && message.text !== query">
               <span>{{ message.text }}</span>
-            </ng-container>
+            </ng-container> -->
           </div>
           <p
             [class]="

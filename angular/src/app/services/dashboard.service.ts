@@ -18,6 +18,7 @@ interface DashboardState {
   data: any[];
   columns: string[];
   query: string;
+  error: string | null;
 }
 
 @Injectable({
@@ -31,7 +32,8 @@ export class DashboardService {
     types: [],
     data: [],
     columns: [],
-    query: ''
+    query: '',
+    error: null
   });
 
   public dashboard$ = this.dashboardState.asObservable();
@@ -72,14 +74,15 @@ export class DashboardService {
     });
   }
 
-  setTypesAndData(types: string[], data: any[], query: string, columns: string[]): void {
+  setTypesAndData(types: string[], data: any[], query: string, columns: string[], error: string | null = null): void {
     const currentState = this.dashboardState.value;
     this.dashboardState.next({
       ...currentState,
       types,
       data,
       query,
-      columns
+      columns,
+      error
     });
   }
 
@@ -108,13 +111,13 @@ export class DashboardService {
     return this.http.post(`${this.baseUrl}/get-query-result2`, { query });
   }
 
-  takeDecision(response: { data: any[], query: string }): void {
-    const { data, query } = response;
+  takeDecision(response: { data: any[], query: string, error: string | null }): void {
+    const { data, query, error } = response;
 
     // Handle empty data
-    if (!data || data.length === 0) {
+    if (!data || data.length === 0 || error) {
       console.warn('No data returned from the query.');
-      this.setTypesAndData([], [], query, []);
+      this.setTypesAndData([], [], query, [], error || 'No data found for the given query');
       return;
     }
 

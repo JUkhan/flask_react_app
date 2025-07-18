@@ -2,7 +2,7 @@ from sqlalchemy import inspect, text
 from typing import Dict
 from models import TableDescription, ColumnComment
 
-class SchemaReaderSqlite:
+class SchemaReader:
     def __init__(self, db_instance):
         self.db = db_instance
     

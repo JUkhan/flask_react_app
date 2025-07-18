@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import request, jsonify
 from sqlalchemy import text, inspect
-from api2 import app, db
+from api2 import app
+from database import db
 from gen_sql.sql_gen_lg import run_qgn_chatbot, get_messages
 from utils import extract_sql
 
-@app.route('/chatbot', methods=['POST'])
+@app.route('/api/chatbot', methods=['POST'])
 def chat():
     user_input = request.json.get('user_input')
     thread_id = request.json.get('thread_id')

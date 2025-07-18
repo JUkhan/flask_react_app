@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
-from api2 import app, db
+from flask import request, jsonify
+from api2 import app
+from database import db
 from models.sample_model import User
 from models import Dashboard
 
@@ -9,10 +10,10 @@ def login():
     data = request.get_json()
     username = data.get('username')
     email = data.get('email')
-    users = User.query.all()
-    for user in users:
-        if user.username==username:
-            return jsonify(user.to_dict())
+    user = User.query.filter_by(username=username, email=email).first()
+    
+    if user.username==username:
+        return jsonify(user.to_dict())
     return jsonify(None)
 
 
@@ -44,7 +45,7 @@ def create_dashboard():
         return jsonify({'error': str(e)}), 500
 
 # READ - Get all users
-@app.route('/api/dashboards/<int:user_id>', methods=['GET'])
+@app.route('/api/dashboards/<user_id>', methods=['GET'])
 def get_dashboards(user_id):
     print('user-id:',user_id)
     try:

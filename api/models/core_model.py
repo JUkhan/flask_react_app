@@ -1,9 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from api2 import db
+from database import db
 
 class TableDescription(db.Model):
-    __tablename__ = 'table_descriptions'
+    __tablename__ = 'table_descriptions_gen_core'
     
     table_name = db.Column(db.String(100), primary_key=True)
     description = db.Column(db.Text, nullable=False)
@@ -37,7 +37,7 @@ class Dashboard(db.Model):
     query = db.Column(db.Text, nullable=False)
     columns = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user_gen_core.id'), nullable=False)
+    user_id = db.Column(db.String(80), nullable=False)
 
     def to_dict(self):
         return {

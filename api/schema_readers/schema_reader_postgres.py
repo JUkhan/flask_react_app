@@ -90,16 +90,17 @@ class SchemaReaderPostgres:
         """Get table description from metadata"""
         schema = schema_name or self.schema_name
         try:
-            table_desc = TableDescription.query.filter_by(
+            table_desc =TableDescription.query.filter_by(
                 table_name=table_name,
-                schema_name=schema
+                #schema_name=schema
             ).first()
             if table_desc:
                 return table_desc.description
-        except Exception:
+        except Exception as e:
             # If TableDescription model doesn't exist, fall back to default
+            print('Error::::',str(e))
             pass
-        return f"Represents {table_name.replace('_', ' ')} data in the {schema} schema."
+        return f"Represents {table_name.replace('_', ' ')} data in the system."
     
     def get_column_comment(self, table_name: str, column_name: str, schema_name: Optional[str] = None) -> str:
         """Get column comment from metadata"""
@@ -108,7 +109,7 @@ class SchemaReaderPostgres:
             column_comment = ColumnComment.query.filter_by(
                 table_name=table_name,
                 column_name=column_name,
-                schema_name=schema
+                #schema_name=schema
             ).first()
             if column_comment:
                 return column_comment.comment

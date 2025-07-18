@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify, render_template_string
-from api2 import app, db
-from schema_readers.schema_reader_sqlite import SchemaReaderSqlite
+from flask import request, jsonify, render_template_string
+from schema_readers.schema_reader import SchemaReader
 from models import ColumnComment, TableDescription
+from database import db
+from api2 import app
 
-schema_reader = SchemaReaderSqlite(db)
+schema_reader = SchemaReader(db)
 
 # API Routes
 @app.route('/')

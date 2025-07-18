@@ -13,13 +13,13 @@ import { Router } from '@angular/router';
 })
 export class LoginComponent {
   username = '';
-  password = '';
+  email = '';
 
   constructor(private http: HttpClient, private router: Router) { }
 
   onSubmit(): void {
-    console.log('Login attempted with:', this.username, this.password);
-    this.http.post('/api/login', { username: this.username, email: this.password })
+    console.log('Login attempted with:', this.username, this.email);
+    this.http.post('/api/login', { username: this.username, email: this.email })
       .subscribe({
         next: (response: any) => {
           console.log('Login successful:', response);

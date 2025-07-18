@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Date, DateTime, Numeric, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from api2 import db
+from database import db
 
 
 class User(db.Model):

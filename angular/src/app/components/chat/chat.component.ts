@@ -43,6 +43,9 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       }
     })
   }
+  get error() {
+    return this.dashboardService.dashboardState.value.error;
+  }
   constructor(
     private chatService: ChatService,
     private dashboardService: DashboardService,
@@ -145,13 +148,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       },
       error: (error) => {
         console.error('Error sending message:', error);
-        const errorResponse: Message = {
-          id: this.messages.length + 1,
-          text: 'Sorry, I encountered an error. Please try again.',
-          sender: 'bot',
-          timestamp: new Date()
-        };
-        this.messages.push(errorResponse);
+        this.dashboardService.takeDecision(error);
         this.isTyping = false;
       }
     });
@@ -169,6 +166,8 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       },
       error: (error) => {
         this.isLoading = false;
+        error.query = sql;
+        this.dashboardService.takeDecision(error);
         console.error('Error executing SQL:', error);
       }
     });

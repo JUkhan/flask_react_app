@@ -1,21 +1,3 @@
-Table: customers
-Description: Represents customers data in the system.
-        customer_id (INTEGER, Primary Key)
-        name (VARCHAR)
-        email (VARCHAR)
-        registration_date (DATE)
-        last_login (DATETIME)
-
-Table: dashboard_gen_core
-Description: Represents dashboard gen core data in the system.
-        id (INTEGER, Primary Key)
-        title (VARCHAR(200), Not Null)
-        type (TEXT, Not Null)
-        query (TEXT, Not Null)
-        columns (TEXT, Not Null)
-        created_at (DATETIME)
-        user_id (INTEGER, Not Null, Foreign Key -> user.id)
-
 Table: order_items
 Description: Represents order items data in the system.
         item_id (INTEGER, Primary Key)
@@ -23,14 +5,6 @@ Description: Represents order items data in the system.
         product_id (INTEGER, Foreign Key -> products.product_id)
         quantity (INTEGER)
         unit_price (NUMERIC)
-
-Table: orders
-Description: Represents orders data in the system.
-        order_id (INTEGER, Primary Key)
-        customer_id (INTEGER, Foreign Key -> customers.customer_id)
-        order_date (DATE)
-        total_amount (NUMERIC)
-        status (VARCHAR)
 
 Table: products
 Description: Represents products data in the system.
@@ -41,9 +15,35 @@ Description: Represents products data in the system.
         category (VARCHAR)
         stock_quantity (INTEGER)
 
+Table: dashboard_gen_core
+Description: asdasdasdasd as d asda sd asd asd
+        id (INTEGER, Primary Key)
+        title (VARCHAR(200), Not Null) - my title
+        type (TEXT, Not Null)
+        query (TEXT, Not Null)
+        columns (TEXT, Not Null)
+        created_at (TIMESTAMP)
+        user_id (VARCHAR(80), Not Null)
+
 Table: user_gen_core
 Description: Represents user gen core data in the system.
         id (INTEGER, Primary Key)
         username (VARCHAR(80), Not Null, Unique)
         email (VARCHAR(120), Not Null, Unique)
-        created_at (DATETIME)
+        created_at (TIMESTAMP)
+
+Table: customers
+Description: Represents customers data in the system.
+        customer_id (INTEGER, Primary Key)
+        name (VARCHAR)
+        email (VARCHAR)
+        registration_date (DATE)
+        last_login (TIMESTAMP)
+
+Table: orders
+Description: Represents orders data in the system.
+        order_id (INTEGER, Primary Key)
+        customer_id (INTEGER, Foreign Key -> customers.customer_id)
+        order_date (DATE)
+        total_amount (NUMERIC)
+        status (VARCHAR)
