@@ -29,6 +29,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   inputValue = '';
   isTyping = false;
   isLoading = false;
+  preventScroll = false;
   private transcriptSubscription: Subscription;
   private errorSubscription: Subscription;
   dashboardState = signal<DashboardState>({
@@ -83,7 +84,9 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   ngAfterViewChecked(): void {
-    this.scrollToBottom();
+    if (!this.preventScroll) {
+      this.scrollToBottom();
+    }
   }
 
   private loadChatHistory(): void {
@@ -141,6 +144,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     const userInput = this.inputValue;
     this.inputValue = '';
     this.isTyping = true;
+    this.preventScroll = false;
 
     // Send message to backend
     const threadId = sessionStorage.getItem('userId') || '123';
@@ -172,6 +176,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (!sql) return;
 
     this.isLoading = true;
+    this.preventScroll = true;
     this.chatService.executeQuery(sql).subscribe({
       next: (data) => {
         this.isLoading = false;

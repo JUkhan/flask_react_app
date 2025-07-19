@@ -37,8 +37,6 @@ Description: Represents orders data in the system.
 
 Table: products
 Description: Represents products data in the system.
-sdfsdfsdf
-sdfsfsdf
         product_id (INTEGER, Primary Key)
         name (VARCHAR)
         description (TEXT)
