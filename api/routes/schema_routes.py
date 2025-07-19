@@ -3,7 +3,7 @@ from schema_readers.schema_reader import SchemaReader
 from models import ColumnComment, TableDescription
 from database import db
 from app import app
-
+from gen_sql.schema import update_table_description, update_column_description, append_to_file
 schema_reader = SchemaReader(db)
 
 # API Routes
@@ -72,6 +72,11 @@ def get_table_descriptions():
     descriptions = TableDescription.query.all()
     return jsonify([desc.to_dict() for desc in descriptions])
 
+def get_schema_description(table_name):
+        schema_reader.load_table_info(table_name)
+        table_info = schema_reader.get_table_info(table_name)
+        return schema_reader.format_table_info(table_name, table_info)
+
 @app.route('/api/descriptions', methods=['POST'])
 def add_table_description():
     """Add or update table description"""
@@ -95,6 +100,9 @@ def add_table_description():
         db.session.add(table_desc)
     
     db.session.commit()
+    isUpdate = update_table_description(table_name, description)
+    if(not isUpdate):
+       append_to_file(get_schema_description(table_name))
     return jsonify({'message': f'Description added for table {table_name}'})
 
 @app.route('/api/comments', methods=['GET'])
@@ -131,6 +139,9 @@ def add_column_comment():
         db.session.add(column_comment)
     
     db.session.commit()
+    isUpdate = update_column_description(table_name, column_name, comment)
+    if(not isUpdate):
+       append_to_file(get_schema_description(table_name))
     return jsonify({'message': f'Comment added for {table_name}.{column_name}'})
 
 
@@ -140,8 +151,9 @@ INDEX_TEMPLATE = '''
 <html>
 <head>
     <title>Database Schema Reader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/ui-lightness/jquery-ui.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
+         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
         .schema-output { background: #f5f5f5; padding: 20px; border-radius: 5px; white-space: pre-wrap; }
         .form-group { margin-bottom: 15px; }
@@ -166,6 +178,74 @@ INDEX_TEMPLATE = '''
         .error{
             background-color: #f44336;
         }
+        
+        /* Custom styles for searchable inputs */
+        .searchable-input {
+            position: relative;
+        }
+        
+        .ui-autocomplete {
+            max-height: 200px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 9999 !important;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .ui-autocomplete .ui-menu-item {
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+        
+        .ui-autocomplete .ui-menu-item-wrapper {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            display: block;
+            color: #333;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .ui-autocomplete .ui-menu-item:last-child .ui-menu-item-wrapper {
+            border-bottom: none;
+        }
+        
+        .ui-autocomplete .ui-menu-item .ui-menu-item-wrapper:hover,
+        .ui-autocomplete .ui-menu-item.ui-state-hover .ui-menu-item-wrapper {
+            background-color: #f8f9fa !important;
+            color: #333 !important;
+        }
+        
+        .ui-autocomplete .ui-menu-item.ui-state-active .ui-menu-item-wrapper,
+        .ui-autocomplete .ui-menu-item.ui-state-focus .ui-menu-item-wrapper {
+            background-color: #007bff !important;
+            color: white !important;
+            border-color: #007bff !important;
+        }
+        
+        .searchable-input input {
+            box-sizing: border-box;
+        }
+        
+        /* Override default jQuery UI styles */
+        .ui-widget {
+            font-family: Arial, sans-serif;
+        }
+        
+        .ui-widget-content {
+            background: white;
+            border: 1px solid #ccc;
+            color: #333;
+        }
+        
+        .ui-menu .ui-menu-item {
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -189,7 +269,9 @@ INDEX_TEMPLATE = '''
             <h2>Manage Table Descriptions</h2>
             <div class="form-group">
                 <label>Table Name:</label>
-                <select onChange="desTableSelect(this.value)" id="desc-table-name"></select>
+                <div class="searchable-input">
+                    <input type="text" id="desc-table-name" placeholder="Search and select table name...">
+                </div>
             </div>
             <div class="form-group">
                 <label>Description:</label>
@@ -203,11 +285,15 @@ INDEX_TEMPLATE = '''
             <h2>Manage Column Comments</h2>
             <div class="form-group">
                 <label>Table Name:</label>
-                <select onChange="commTableSelect(this.value)" id="comment-table-name"></select>
+                <div class="searchable-input">
+                    <input type="text" id="comment-table-name" placeholder="Search and select table name...">
+                </div>
             </div>
             <div class="form-group">
                 <label>Column Name:</label>
-                <select onChange="onColumnSelect(this.value)" id="comment-column-name"></select>
+                <div class="searchable-input">
+                    <input type="text" id="comment-column-name" placeholder="Search and select column name...">
+                </div>
             </div>
             <div class="form-group">
                 <label>Comment:</label>
@@ -218,43 +304,53 @@ INDEX_TEMPLATE = '''
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
     <script>
-        let selectedTable=null;
-        function desTableSelect(val){
-            getTableInfo(val).then(it=>{
-                document.getElementById('desc-description').value=it.raw_info.description
-            })
+        let selectedTable = null;
+        let allTableNames = [];
+        
+        function desTableSelect(val) {
+            getTableInfo(val).then(it => {
+                document.getElementById('desc-description').value = it.raw_info.description || '';
+            });
         }
-        function commTableSelect(val){
-            getTableInfo(val).then(it=>{
+        
+        function commTableSelect(val) {
+            getTableInfo(val).then(it => {
                 selectedTable = it;
-                populateDropdownWithPlaceholder('comment-column-name', it.raw_info.columns.map(it=>it.name),'Select column name')
-            })
+                const columnNames = it.raw_info.columns.map(col => col.name);
+                setupAutocomplete('comment-column-name', columnNames, 'Search and select column name...');
+            });
         }
-        function onColumnSelect(val){
-            if(!selectedTable){
-                showMessage('Select a table name')
+        
+        function onColumnSelect(val) {
+            if (!selectedTable) {
+                showMessage('Select a table name first');
                 return;
             }
-            const col=selectedTable.raw_info.columns.find(it=>it.name===val);
-            if(col)
-                document.getElementById('comment-comment').value=col.comment
-            
+            const col = selectedTable.raw_info.columns.find(it => it.name === val);
+            if (col) {
+                document.getElementById('comment-comment').value = col.comment || '';
+            }
         }
-        function showMessage(msg, time=3000){
+        
+        function showMessage(msg, time = 3000) {
             const div = document.getElementById('msg');
-            div.innerHTML=`<span class="msg">${msg}</span>`
-            setTimeout(function(){
-                div.innerHTML='';
-            }, time);   
+            div.innerHTML = `<span class="msg">${msg}</span>`;
+            setTimeout(function() {
+                div.innerHTML = '';
+            }, time);
         }
-        function errorMessage(msg, time=3000){
+        
+        function errorMessage(msg, time = 3000) {
             const div = document.getElementById('msg');
-            div.innerHTML=`<span class="msg error">${msg}</span>`
-            setTimeout(function(){
-                div.innerHTML='';
-            }, time);   
+            div.innerHTML = `<span class="msg error">${msg}</span>`;
+            setTimeout(function() {
+                div.innerHTML = '';
+            }, time);
         }
+        
         function showTab(tabName) {
             // Hide all tabs
             const tabs = document.querySelectorAll('.tab');
@@ -269,28 +365,28 @@ INDEX_TEMPLATE = '''
         }
 
         function loadSchema() {
-            const btn=document.getElementById('btn-load-schema')
-            btn.textContent='loading...'
-            btn.disabled=true
-            document.getElementById('schema-output').textContent='Loading...'
+            const btn = document.getElementById('btn-load-schema');
+            btn.textContent = 'loading...';
+            btn.disabled = true;
+            document.getElementById('schema-output').textContent = 'Loading...';
             fetch('/api/schema?format=text')
                 .then(response => response.text())
                 .then(data => {
-                     btn.textContent='Load Schema'
-                     btn.disabled=true
+                    btn.textContent = 'Load Schema';
+                    btn.disabled = false;
                     document.getElementById('schema-output').textContent = data;
                 });
         }
 
         function exportSchema() {
-            const btn=document.getElementById('btn-export')
-            btn.textContent='loading...'
-            btn.disabled=true
+            const btn = document.getElementById('btn-export');
+            btn.textContent = 'loading...';
+            btn.disabled = true;
             fetch('/api/schema/file?filename=schema.txt')
                 .then(response => response.json())
                 .then(data => {
-                    btn.textContent='Export to File'
-                    btn.disabled=false
+                    btn.textContent = 'Export to File';
+                    btn.disabled = false;
                     showMessage(data.message);
                 });
         }
@@ -299,6 +395,11 @@ INDEX_TEMPLATE = '''
             const tableName = document.getElementById('desc-table-name').value;
             const description = document.getElementById('desc-description').value;
             
+            if (!tableName) {
+                errorMessage('Please select a table name');
+                return;
+            }
+            
             fetch('/api/descriptions', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -306,11 +407,12 @@ INDEX_TEMPLATE = '''
             })
             .then(response => response.json())
             .then(data => {
-                if(data.error) errorMessage(data.error);
+                if (data.error) errorMessage(data.error);
                 else showMessage(data.message);
-                if(!data.message)return;
-                document.getElementById('desc-table-name').value = '';
-                document.getElementById('desc-description').value = '';
+                if (!data.error) {
+                    document.getElementById('desc-table-name').value = '';
+                    document.getElementById('desc-description').value = '';
+                }
             });
         }
 
@@ -318,6 +420,16 @@ INDEX_TEMPLATE = '''
             const tableName = document.getElementById('comment-table-name').value;
             const columnName = document.getElementById('comment-column-name').value;
             const comment = document.getElementById('comment-comment').value;
+            
+            if (!tableName) {
+                errorMessage('Please select a table name');
+                return;
+            }
+            
+            if (!columnName) {
+                errorMessage('Please select a column name');
+                return;
+            }
             
             fetch('/api/comments', {
                 method: 'POST',
@@ -330,63 +442,91 @@ INDEX_TEMPLATE = '''
             })
             .then(response => response.json())
             .then(data => {
-                if(data.error) errorMessage(data.error);
+                if (data.error) errorMessage(data.error);
                 else showMessage(data.message);
-                if(!data.message)return;
-                document.getElementById('comment-table-name').value = '';
-                document.getElementById('comment-column-name').value = '';
-                document.getElementById('comment-comment').value = '';
+                if (!data.error) {
+                    document.getElementById('comment-table-name').value = '';
+                    document.getElementById('comment-column-name').value = '';
+                    document.getElementById('comment-comment').value = '';
+                }
             });
         }
 
-        function getAllTableNames(){
+        function getAllTableNames() {
             return fetch('/api/tables')
-            .then(response => response.json())
+                .then(response => response.json());
         }
 
-        function getTableInfo(tableName){
-            return fetch('/api/tables/'+tableName)
-            .then(response => response.json())
+        function getTableInfo(tableName) {
+            return fetch('/api/tables/' + tableName)
+                .then(response => response.json());
         }
-
-        function populateDropdownWithPlaceholder(dropdownId, options, placeholder = 'Select an option...') {
-            const dropdown = document.getElementById(dropdownId);
+        
+        // Setup autocomplete for a given input element
+        function setupAutocomplete(elementId, options, placeholder) {
+            const $element = $('#' + elementId);
             
-            if (!dropdown) {
-                console.error(`Dropdown with ID '${dropdownId}' not found`);
-                return;
+            // Destroy existing autocomplete if it exists
+            if ($element.hasClass('ui-autocomplete-input')) {
+                $element.autocomplete('destroy');
             }
             
-            // Clear existing options
-            dropdown.innerHTML = '';
+            $element.attr('placeholder', placeholder);
             
-            // Add placeholder option
-            if (placeholder) {
-                const placeholderOption = document.createElement('option');
-                placeholderOption.value = '';
-                placeholderOption.textContent = placeholder;
-                placeholderOption.disabled = true;
-                placeholderOption.selected = true;
-                dropdown.appendChild(placeholderOption);
-            }
-            
-            // Add options from the array
-            options.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
-                dropdown.appendChild(optionElement);
+            $element.autocomplete({
+                source: options,
+                minLength: 0,
+                delay: 0,
+                autoFocus: true,
+                select: function(event, ui) {
+                    // Handle selection based on the element
+                    if (elementId === 'desc-table-name') {
+                        desTableSelect(ui.item.value);
+                    } else if (elementId === 'comment-table-name') {
+                        commTableSelect(ui.item.value);
+                    } else if (elementId === 'comment-column-name') {
+                        onColumnSelect(ui.item.value);
+                    }
+                    return true;
+                },
+                focus: function(event, ui) {
+                    // Prevent the input from being updated when navigating with keyboard
+                    return false;
+                },
+                change: function(event, ui) {
+                    // Validate that the entered value is in the list
+                    const value = $(this).val();
+                    if (value && options.indexOf(value) === -1) {
+                        $(this).val('');
+                        if (elementId === 'comment-column-name') {
+                            document.getElementById('comment-comment').value = '';
+                        } else if (elementId === 'desc-table-name') {
+                            document.getElementById('desc-description').value = '';
+                        }
+                        showMessage('Please select a valid option from the list');
+                    }
+                }
+            }).on('click', function() {
+                // Show all options when clicking on the input
+                if ($(this).val() === '') {
+                    $(this).autocomplete('search', '');
+                }
             });
         }
 
         // Load schema on page load
-        window.onload = function() {
-            //loadSchema();
-            getAllTableNames().then((options)=>{
-                populateDropdownWithPlaceholder('desc-table-name',options,'Select table name.')
-                populateDropdownWithPlaceholder('comment-table-name',options,'Select table name.')
-           })
-        };
+        $(document).ready(function() {
+            getAllTableNames().then((tableNames) => {
+                allTableNames = tableNames;
+                
+                // Setup autocomplete for table name inputs
+                setupAutocomplete('desc-table-name', tableNames, 'Search and select table name...');
+                setupAutocomplete('comment-table-name', tableNames, 'Search and select table name...');
+                
+                // Initialize column name input as empty
+                setupAutocomplete('comment-column-name', [], 'Search and select column name...');
+            });
+        });
     </script>
 </body>
 </html>
