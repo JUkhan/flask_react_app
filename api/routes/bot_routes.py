@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from sqlalchemy import text, inspect
-from api2 import app
+from app import app
 from database import db
 from gen_sql.sql_gen_lg import run_qgn_chatbot, get_messages
 from utils import extract_sql

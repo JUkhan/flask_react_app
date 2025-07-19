@@ -1,11 +1,7 @@
-from flask import Flask
-from database import db
 import os
-from dotenv import load_dotenv
+from app import app
+from database import db
 
-load_dotenv()
-
-app = Flask(__name__)
 schema = os.getenv('SCHEMA','public')
 
 # Configure SQLAlchemy
@@ -14,7 +10,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
-    'pool_recycle': 300,
+    'pool_recycle': 3600,
     'pool_timeout': 20,
     'max_overflow': 10,
     'connect_args': {

@@ -1,3 +1,6 @@
+=== SCHEMA: DM_SCHEMA ===
+
+
 Table: _aim_c3_hh_information
 Description: Represents  aim c3 hh information data in the system.
         id (VARCHAR)

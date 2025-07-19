@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from api2 import app
+from app import app
 from database import db
 from models.sample_model import User
 from models import Dashboard

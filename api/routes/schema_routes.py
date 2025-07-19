@@ -2,7 +2,7 @@ from flask import request, jsonify, render_template_string
 from schema_readers.schema_reader import SchemaReader
 from models import ColumnComment, TableDescription
 from database import db
-from api2 import app
+from app import app
 
 schema_reader = SchemaReader(db)
 
@@ -55,6 +55,7 @@ def get_tables():
 def get_table_info(table_name):
     """Get information about a specific table"""
     try:
+        schema_reader.load_table_info(table_name)
         table_info = schema_reader.get_table_info(table_name)
         formatted_info = schema_reader.format_table_info(table_name, table_info)
         return jsonify({
@@ -145,7 +146,7 @@ INDEX_TEMPLATE = '''
         .schema-output { background: #f5f5f5; padding: 20px; border-radius: 5px; white-space: pre-wrap; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; }
-        input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; }
         button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
         button:hover { background: #0056b3; }
         .tabs { margin-bottom: 20px; }
@@ -153,12 +154,24 @@ INDEX_TEMPLATE = '''
         .tab.active { background: #007bff; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .msg{
+            padding: 20px;
+            background-color: #007bff;
+            color: white;
+            margin-bottom:5px;
+            position:absolute;
+            top:65px;
+            left:700px;
+        }
+        .error{
+            background-color: #f44336;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Database Schema Reader</h1>
-        
+        <div id="msg"></div>
         <div class="tabs">
             <div class="tab active" onclick="showTab('schema')">Schema</div>
             <div class="tab" onclick="showTab('descriptions')">Table Descriptions</div>
@@ -167,8 +180,8 @@ INDEX_TEMPLATE = '''
         
         <div id="schema" class="tab-content active">
             <h2>Database Schema</h2>
-            <button onclick="loadSchema()">Load Schema</button>
-            <button onclick="exportSchema()">Export to File</button>
+            <button id="btn-load-schema" onclick="loadSchema()">Load Schema</button>
+            <button id="btn-export" onclick="exportSchema()">Export to File</button>
             <div id="schema-output" class="schema-output"></div>
         </div>
         
@@ -176,7 +189,7 @@ INDEX_TEMPLATE = '''
             <h2>Manage Table Descriptions</h2>
             <div class="form-group">
                 <label>Table Name:</label>
-                <input type="text" id="desc-table-name" placeholder="Enter table name">
+                <select onChange="desTableSelect(this.value)" id="desc-table-name"></select>
             </div>
             <div class="form-group">
                 <label>Description:</label>
@@ -190,11 +203,11 @@ INDEX_TEMPLATE = '''
             <h2>Manage Column Comments</h2>
             <div class="form-group">
                 <label>Table Name:</label>
-                <input type="text" id="comment-table-name" placeholder="Enter table name">
+                <select onChange="commTableSelect(this.value)" id="comment-table-name"></select>
             </div>
             <div class="form-group">
                 <label>Column Name:</label>
-                <input type="text" id="comment-column-name" placeholder="Enter column name">
+                <select onChange="onColumnSelect(this.value)" id="comment-column-name"></select>
             </div>
             <div class="form-group">
                 <label>Comment:</label>
@@ -206,6 +219,42 @@ INDEX_TEMPLATE = '''
     </div>
 
     <script>
+        let selectedTable=null;
+        function desTableSelect(val){
+            getTableInfo(val).then(it=>{
+                document.getElementById('desc-description').value=it.raw_info.description
+            })
+        }
+        function commTableSelect(val){
+            getTableInfo(val).then(it=>{
+                selectedTable = it;
+                populateDropdownWithPlaceholder('comment-column-name', it.raw_info.columns.map(it=>it.name),'Select column name')
+            })
+        }
+        function onColumnSelect(val){
+            if(!selectedTable){
+                showMessage('Select a table name')
+                return;
+            }
+            const col=selectedTable.raw_info.columns.find(it=>it.name===val);
+            if(col)
+                document.getElementById('comment-comment').value=col.comment
+            
+        }
+        function showMessage(msg, time=3000){
+            const div = document.getElementById('msg');
+            div.innerHTML=`<span class="msg">${msg}</span>`
+            setTimeout(function(){
+                div.innerHTML='';
+            }, time);   
+        }
+        function errorMessage(msg, time=3000){
+            const div = document.getElementById('msg');
+            div.innerHTML=`<span class="msg error">${msg}</span>`
+            setTimeout(function(){
+                div.innerHTML='';
+            }, time);   
+        }
         function showTab(tabName) {
             // Hide all tabs
             const tabs = document.querySelectorAll('.tab');
@@ -220,18 +269,29 @@ INDEX_TEMPLATE = '''
         }
 
         function loadSchema() {
+            const btn=document.getElementById('btn-load-schema')
+            btn.textContent='loading...'
+            btn.disabled=true
+            document.getElementById('schema-output').textContent='Loading...'
             fetch('/api/schema?format=text')
                 .then(response => response.text())
                 .then(data => {
+                     btn.textContent='Load Schema'
+                     btn.disabled=true
                     document.getElementById('schema-output').textContent = data;
                 });
         }
 
         function exportSchema() {
+            const btn=document.getElementById('btn-export')
+            btn.textContent='loading...'
+            btn.disabled=true
             fetch('/api/schema/file?filename=schema.txt')
                 .then(response => response.json())
                 .then(data => {
-                    alert(data.message);
+                    btn.textContent='Export to File'
+                    btn.disabled=false
+                    showMessage(data.message);
                 });
         }
 
@@ -246,7 +306,9 @@ INDEX_TEMPLATE = '''
             })
             .then(response => response.json())
             .then(data => {
-                alert(data.message || data.error);
+                if(data.error) errorMessage(data.error);
+                else showMessage(data.message);
+                if(!data.message)return;
                 document.getElementById('desc-table-name').value = '';
                 document.getElementById('desc-description').value = '';
             });
@@ -268,16 +330,62 @@ INDEX_TEMPLATE = '''
             })
             .then(response => response.json())
             .then(data => {
-                alert(data.message || data.error);
+                if(data.error) errorMessage(data.error);
+                else showMessage(data.message);
+                if(!data.message)return;
                 document.getElementById('comment-table-name').value = '';
                 document.getElementById('comment-column-name').value = '';
                 document.getElementById('comment-comment').value = '';
             });
         }
 
+        function getAllTableNames(){
+            return fetch('/api/tables')
+            .then(response => response.json())
+        }
+
+        function getTableInfo(tableName){
+            return fetch('/api/tables/'+tableName)
+            .then(response => response.json())
+        }
+
+        function populateDropdownWithPlaceholder(dropdownId, options, placeholder = 'Select an option...') {
+            const dropdown = document.getElementById(dropdownId);
+            
+            if (!dropdown) {
+                console.error(`Dropdown with ID '${dropdownId}' not found`);
+                return;
+            }
+            
+            // Clear existing options
+            dropdown.innerHTML = '';
+            
+            // Add placeholder option
+            if (placeholder) {
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = '';
+                placeholderOption.textContent = placeholder;
+                placeholderOption.disabled = true;
+                placeholderOption.selected = true;
+                dropdown.appendChild(placeholderOption);
+            }
+            
+            // Add options from the array
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                dropdown.appendChild(optionElement);
+            });
+        }
+
         // Load schema on page load
         window.onload = function() {
-            loadSchema();
+            //loadSchema();
+            getAllTableNames().then((options)=>{
+                populateDropdownWithPlaceholder('desc-table-name',options,'Select table name.')
+                populateDropdownWithPlaceholder('comment-table-name',options,'Select table name.')
+           })
         };
     </script>
 </body>

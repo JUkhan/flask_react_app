@@ -1,8 +1,11 @@
 from sqlalchemy import inspect, text
 from typing import Dict
 from models import TableDescription, ColumnComment
+import os
 
 class SchemaReader:
+    table_desc:Dict[str, str]={}
+    column_desc:Dict[str,str]={}
     def __init__(self, db_instance):
         self.db = db_instance
     
@@ -62,22 +65,22 @@ class SchemaReader:
     
     def get_table_description(self, table_name: str) -> str:
         """Get table description from metadata"""
-        return f"Represents {table_name.replace('_', ' ')} data in the system."
-        table_desc = TableDescription.query.filter_by(table_name=table_name).first()
-        if table_desc:
-            return table_desc.description
-        return f"Represents {table_name.replace('_', ' ')} data in the system."
+        return self.table_desc.get(table_name,f"Represents {table_name.replace('_', ' ')} data in the system.")
+        # table_desc = TableDescription.query.filter_by(table_name=table_name).first()
+        # if table_desc:
+        #     return table_desc.description
+        # return f"Represents {table_name.replace('_', ' ')} data in the system."
     
     def get_column_comment(self, table_name: str, column_name: str) -> str:
         """Get column comment from metadata"""
-        return ""
-        column_comment = ColumnComment.query.filter_by(
-            table_name=table_name, 
-            column_name=column_name
-        ).first()
-        if column_comment:
-            return column_comment.comment
-        return ""
+        return self.column_desc.get(table_name+column_name,'')
+        # column_comment = ColumnComment.query.filter_by(
+        #     table_name=table_name, 
+        #     column_name=column_name
+        # ).first()
+        # if column_comment:
+        #     return column_comment.comment
+        # return ""
     
     def format_table_info(self, table_name: str, table_info: Dict) -> str:
         """Format table information for output"""
@@ -102,19 +105,27 @@ class SchemaReader:
         
         return '\n'.join(output)
     
+    def load_table_info(self, table_name):
+        self.table_desc = {item.table_name:item.description for item in TableDescription.query.filter_by(table_name=table_name).all()}
+        self.column_desc = { item.table_name+item.column_name:item.comment for item in ColumnComment.query.filter_by(table_name=table_name).all()}
+
     def generate_schema_output(self, output_file: str = None) -> str:
         """Generate formatted schema output"""
         tables = self.get_all_tables()
         schema_parts = []
+        print('-----------generate_schema_output-----------')
+        
+        self.table_desc = {item.table_name:item.description for item in TableDescription.query.all()}
+        self.column_desc = { item.table_name+item.column_name:item.comment for item in ColumnComment.query.all()}
+        schema=os.getenv('SCHEMA','')
+        if schema:
+            schema_parts.append(f"=== SCHEMA: {schema.upper()} ===\n")
         
         for table_name in tables:
             table_info = self.get_table_info(table_name)
             schema_parts.append(self.format_table_info(table_name, table_info))
         
         schema_output = '\n\n'.join(schema_parts)
-        
-        # if output_file:
-        #     with open(output_file, 'w', encoding='utf-8') as f:
-        #         f.write(schema_output)
-        
+        self.table_desc.clear()
+        self.column_desc.clear()
         return schema_output
