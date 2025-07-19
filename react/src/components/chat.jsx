@@ -293,7 +293,7 @@ export default function ChatPopup() {
                 <React.Fragment>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {componentTypes.map(({type, name, icon:Icon}) => (
-                      <button onClick={addComponent(type)} key={type} className={` px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors`}>
+                      <button onClick={addComponent(type)} key={type} className={` px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors shadow-md`}>
                         <Icon className="w-4 h-4 inline-block mr-1" />
                         {name}
                       </button>))}
@@ -331,6 +331,12 @@ export default function ChatPopup() {
         {/* Input Area */}
         <div className="border-t p-4">
           <div className="flex space-x-2">
+            <button
+              onClick={toggleListening}
+              className={`px-4 py-2 ${isListening?'bg-red-500':'bg-blue-500'} text-white rounded-lg hover:${isListening?'bg-red-600':'bg-blue-600'} focus:outline-none focus:ring-2 focus:${isListening?'ring-red-500':'ring-blue-500'} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
+            >
+              <MicIcon className="w-5 h-5" />
+            </button>
             <input
               type="text"
               value={inputValue}
@@ -348,12 +354,7 @@ export default function ChatPopup() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>
-            <button
-              onClick={toggleListening}
-              className={`px-4 py-2 ${isListening?'bg-red-500':'bg-blue-500'} text-white rounded-lg hover:${isListening?'bg-red-600':'bg-blue-600'} focus:outline-none focus:ring-2 focus:${isListening?'ring-red-500':'ring-blue-500'} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
-            >
-              <MicIcon className="w-5 h-5" />
-            </button>
+            
           </div>
         </div>
       </div>

@@ -94,10 +94,10 @@
       >
         <div
           [class]="
-            'max-w-xs px-4 py-2 rounded-lg relative group ' +
+            'max-w-xs px-4 py-2 rounded-lg ' +
             (message.sender === 'user'
               ? 'bg-blue-500 text-white rounded-br-none'
-              : 'bg-blue-200 text-gray-800 rounded-bl-none')
+              : 'bg-blue-200 text-gray-800 rounded-bl-none relative group')
           "
         >
           <button
@@ -105,7 +105,7 @@
             [disabled]="isLoading"
             (click)="loadSqlData(message.text)"
             title="Click to load data"
-            class="absolute -top-1 -right-1 p-1 cursor-pointer opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-colors"
+            class="p-1 cursor-pointer opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 text-red-400 hover:text-red-600 transition-colors"
           >
             <svg
               *ngIf="!isLoading"
@@ -153,9 +153,13 @@
                 <button
                   *ngFor="let component of components()"
                   (click)="addComponent(component.type)"
-                  class="px-2 py-1 rounded-lg cursor-pointer bg-gray-50 hover:bg-orange-100 text-orange-400 hover:text-orange-600 transition-colors shadow-md"
+                  class="px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors shadow-md"
                 >
-                  <lucide-angular [img]="component.icon" class="inline-block" />
+                  <lucide-angular
+                    size="16"
+                    [img]="component.icon"
+                    class="inline-block"
+                  />
                   {{ component.name }}
                 </button>
               </div>
