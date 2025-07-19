@@ -62,6 +62,7 @@ class SchemaReader:
     
     def get_table_description(self, table_name: str) -> str:
         """Get table description from metadata"""
+        return f"Represents {table_name.replace('_', ' ')} data in the system."
         table_desc = TableDescription.query.filter_by(table_name=table_name).first()
         if table_desc:
             return table_desc.description
@@ -69,6 +70,7 @@ class SchemaReader:
     
     def get_column_comment(self, table_name: str, column_name: str) -> str:
         """Get column comment from metadata"""
+        return ""
         column_comment = ColumnComment.query.filter_by(
             table_name=table_name, 
             column_name=column_name

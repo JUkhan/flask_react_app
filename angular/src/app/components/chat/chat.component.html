@@ -153,12 +153,9 @@
                 <button
                   *ngFor="let component of components()"
                   (click)="addComponent(component.type)"
-                  class="px-2 py-1 text-lg rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors"
+                  class="px-2 py-1 rounded-lg cursor-pointer bg-gray-50 hover:bg-orange-100 text-orange-400 hover:text-orange-600 transition-colors shadow-md"
                 >
-                  <lucide-angular
-                    [img]="component.icon"
-                    class="w-5 h-5 inline-block mr-1"
-                  />
+                  <lucide-angular [img]="component.icon" class="inline-block" />
                   {{ component.name }}
                 </button>
               </div>
