@@ -153,7 +153,6 @@ export class DashboardService {
     console.log('Columns:', acc);
     columns = columns.filter(col => col !== namedColumn);
     columns.unshift(namedColumn);
-
     if (acc['string'] > 1 || acc['unknown'] > 0) {
       this.setTypesAndData(['table'], data, query, columns);
     } else if (acc['number'] > 1) {

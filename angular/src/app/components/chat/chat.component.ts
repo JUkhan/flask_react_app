@@ -6,7 +6,7 @@ import { ChatService, Message, HelpDesk } from '../../services/chat.service';
 import { DashboardService, DashboardState } from '../../services/dashboard.service';
 import { SpeechRecognitionService } from '../../services/speech-recognition.service';
 import { Subscription, Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import { LucideAngularModule, SignalHighIcon, Loader2Icon, BarChart3, TrendingUp, DonutIcon, PieChart, Grid3X3 } from 'lucide-angular';
 import { TableComponentComponent } from '../table-component/table-component.component';
 import { LineChartComponent } from '../chart-components/line-chart/line-chart.component';
@@ -58,6 +58,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   query: string = '';
   helpDeskResults: HelpDesk[] = [];
   private searchTerms = new Subject<string>();
+  private selectedHelpDesk: HelpDesk | null = null;
 
   constructor(
     private chatService: ChatService,
@@ -81,13 +82,14 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   ngOnInit(): void {
     this.loadChatHistory();
     this.dashboardService.dashboardState.subscribe(state => {
+      console.log('Dashboard state updated:::::', state, this.messages);
       this.dashboardState.set(state);
       this.query = state.query;
     });
 
     this.searchTerms.pipe(
       debounceTime(300),
-      distinctUntilChanged(),
+      //distinctUntilChanged(),
       switchMap((term: string) => this.chatService.searchHelpDesk(term))
     ).subscribe(results => {
       this.helpDeskResults = results;
@@ -118,7 +120,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             hasSql: msg.sender === 'bot' ? (msg.text.startsWith('SELECT') || msg.text.startsWith('select')) : false,
             timestamp: new Date()
           }));
-          this.messages = initialMessages;
+          this.messages = this.chatService.sync(initialMessages);
         }
       },
       error: (error) => {
@@ -146,9 +148,31 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.isOpen = false;
   }
 
-  helpDeskAction(queryDescription: string): void {
-    this.inputValue = queryDescription;
-    this.handleSendMessage();
+  helpDeskAction(helpDesk: HelpDesk): void {
+    console.log('Help Desk Action:', helpDesk);
+    this.selectedHelpDesk = helpDesk;
+    if (helpDesk.query) {
+      const newMessage: Message = {
+        id: this.messages.length + 1,
+        text: helpDesk.title,
+        sender: 'user',
+        timestamp: new Date(),
+      };
+      this.messages.push(newMessage);
+      const botResponse: Message = {
+        id: this.messages.length + 1,
+        text: helpDesk.query,
+        sender: 'bot',
+        hasSql: true,
+        timestamp: new Date()
+      };
+      this.messages.push(botResponse);
+      this.loadSqlData(helpDesk.query);
+      this.inputValue = '';
+    } else {
+      this.inputValue = helpDesk.query_description;
+      this.handleSendMessage();
+    }
     this.helpDeskResults = [];
   }
 
@@ -157,7 +181,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
     const newMessage: Message = {
       id: this.messages.length + 1,
-      text: this.inputValue,
+      text: this.selectedHelpDesk ? this.selectedHelpDesk.title : this.inputValue,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -186,31 +210,47 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
         this.messages.push(botResponse);
         this.isTyping = false;
+        if (data.query && this.selectedHelpDesk) {
+          this.selectedHelpDesk.query = data.query;
+          this.chatService.updateHelpDesk(this.selectedHelpDesk).subscribe({
+            next: (updatedHelpDesks) => {
+              console.log('Help desk updated:', updatedHelpDesks);
+              this.selectedHelpDesk = null; // Clear selected help desk after update
+            },
+            error: (error) => {
+              console.error('Error updating help desk:', error);
+              this.selectedHelpDesk = null;
+            }
+          });
+        }
       },
       error: (error) => {
         console.error('Error sending message:', error);
         this.dashboardService.takeDecision(error);
         this.isTyping = false;
+        this.selectedHelpDesk = null;
       }
     });
   }
 
   loadSqlData(sql: string): void {
     if (!sql) return;
-
     this.isLoading = true;
-    this.preventScroll = true;
+    this.preventScroll = this.selectedHelpDesk === null ? true : false;
     this.chatService.executeQuery(sql).subscribe({
       next: (data) => {
+        console.log('SQL execution result:', data);
         this.isLoading = false;
         data.query = sql;
         this.dashboardService.takeDecision(data);
+        this.selectedHelpDesk = null; // Clear selected help desk after execution
       },
       error: (error) => {
         this.isLoading = false;
         error.query = sql;
         this.dashboardService.takeDecision(error);
         console.error('Error executing SQL:', error);
+        this.selectedHelpDesk = null; // Clear selected help desk on error
       }
     });
   }

@@ -54,9 +54,10 @@ class HelpDesk(db.Model):
     __tablename__ = 'helpdesk_gen_core'
     title = db.Column(db.Text, primary_key=True)
     query_description = db.Column(db.Text, nullable=False)
-    
+    query_text = db.Column('query', db.Text, nullable=True) 
     def to_dict(self):
         return {
             'title': self.title,
-            'query_description': self.query_description
+            'query_description': self.query_description,
+            'query':self.query_text
         }

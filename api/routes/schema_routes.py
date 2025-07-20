@@ -368,6 +368,10 @@ INDEX_TEMPLATE = '''
                     <label for="helpdesk-query-description">Query Description</label>
                     <textarea id="helpdesk-query-description" name="query_description" required></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="helpdesk-query">Query</label>
+                    <textarea id="helpdesk-query" name="query"></textarea>
+                </div>
             </form>
         </div>
     </div>
@@ -633,6 +637,7 @@ INDEX_TEMPLATE = '''
                             document.getElementById('helpdesk-title').value = data.entry.title;
                             document.getElementById('helpdesk-title').readOnly = true;
                             document.getElementById('helpdesk-query-description').value = data.entry.query_description;
+                            document.getElementById('helpdesk-query').value = data.entry.query;
                         }
                     });
             } else {
@@ -641,10 +646,14 @@ INDEX_TEMPLATE = '''
 
             $("#helpdesk-modal").dialog({
                 modal: true,
+                width: 600,
                 buttons: {
                     "Save": function() {
-                        saveHelpDeskEntry();
-                        $(this).dialog("close");
+                        saveHelpDeskEntry().then(it=>{
+                            if(it){
+                             $(this).dialog("close");
+                            }
+                        });     
                     },
                     Cancel: function() {
                         $(this).dialog("close");
@@ -656,15 +665,23 @@ INDEX_TEMPLATE = '''
         function saveHelpDeskEntry() {
             const title = document.getElementById('helpdesk-title').value;
             const queryDescription = document.getElementById('helpdesk-query-description').value;
+            const query = document.getElementById('helpdesk-query').value;
             const hiddenTitle = document.getElementById('helpdesk-title-hidden').value;
-
+            if(!title){
+                errorMessage('Title is required.')
+                return Promise.resolve(false);
+            }
+            if(!queryDescription){
+                errorMessage('Query description is required.')
+                return Promise.resolve(false);
+            }
             const method = hiddenTitle ? 'PUT' : 'POST';
             const url = hiddenTitle ? `/api/helpdesk/${hiddenTitle}` : '/api/helpdesk';
 
-            fetch(url, {
+            return fetch(url, {
                 method: method,
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ title: title, query_description: queryDescription })
+                body: JSON.stringify({ title: title, query_description: queryDescription, query:query })
             })
             .then(response => response.json())
             .then(data => {
@@ -674,6 +691,7 @@ INDEX_TEMPLATE = '''
                     showMessage(data.message);
                     loadHelpDeskData();
                 }
+                return true;
             });
         }
 

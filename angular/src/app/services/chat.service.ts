@@ -14,6 +14,7 @@ export interface Message {
 export interface HelpDesk {
   title: string;
   query_description: string;
+  query: string | null;
 }
 
 @Injectable({
@@ -23,6 +24,18 @@ export class ChatService {
   private baseUrl = '/api';
   private helpDesks: HelpDesk[] = [];
 
+  sync(messages: Message[]): Message[] {
+    return messages.map(msg => {
+      if (msg.sender === 'user') {
+        const item = this.helpDesks.find(d => d.query_description === msg.text);
+        if (item) {
+          msg.text = item.title;
+        }
+        return msg;
+      }
+      return msg;
+    });
+  }
   constructor(private http: HttpClient) {
     this.getAllHelpDesk().subscribe(data => {
       this.helpDesks = data;
@@ -51,6 +64,15 @@ export class ChatService {
       map((it: any) => it.data || []),
       catchError(error => {
         console.error('Error fetching help desk data:', error);
+        return of([]);
+      })
+    );
+  }
+
+  updateHelpDesk(helpDesk: HelpDesk): Observable<HelpDesk[]> {
+    return this.http.put<HelpDesk[]>(`${this.baseUrl}/helpdesk/${helpDesk.title}`, helpDesk).pipe(
+      catchError(error => {
+        console.error('Error updating help desk data:', error);
         return of([]);
       })
     );

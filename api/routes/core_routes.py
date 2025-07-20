@@ -44,7 +44,7 @@ def create_dashboard():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# READ - Get all users
+# READ - Get all dashboards
 @app.route('/api/dashboards/<user_id>', methods=['GET'])
 def get_dashboards(user_id):
     print('user-id:',user_id)
@@ -56,7 +56,7 @@ def get_dashboards(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# READ - Get a single user by ID
+# READ - Get a single dashboard by ID
 @app.route('/api/dashboard/<int:dashboard_id>', methods=['GET'])
 def get_dashboard(dashboard_id):
     try:
@@ -68,7 +68,7 @@ def get_dashboard(dashboard_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# UPDATE - Update a user
+# UPDATE - Update a dashboard
 @app.route('/api/dashboard/<int:dashboard_id>', methods=['PUT'])
 def update_dashboard(dashboard_id):
     try:
@@ -96,14 +96,20 @@ def update_dashboard(dashboard_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# DELETE - Delete a user
+
+# DELETE - Delete a dashboard
 @app.route('/api/dashboard/<int:dashboard_id>', methods=['DELETE'])
-def delete_dashboard(dashboard_id):
+def delete_user(dashboard_id):
     try:
-        user = Dashboard.query.get_or_404(id)
+        user = db.session.query(Dashboard).get(dashboard_id)
+        if not user:
+            return jsonify({'error': 'Dashboard not found'}), 404
+        
         db.session.delete(user)
         db.session.commit()
-        return jsonify({'message': 'User deleted successfully'})
+        
+        return jsonify({'message': 'Dashboard deleted successfully'}), 200
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -116,7 +122,8 @@ def create_helpdesk_entry():
         data = request.get_json()
         new_entry = HelpDesk(
             title=data['title'],
-            query_description=data['query_description']
+            query_description=data['query_description'],
+            query_text=data['query'] 
         )
         db.session.add(new_entry)
         db.session.commit()
@@ -157,6 +164,9 @@ def update_helpdesk_entry(title):
         
         if 'query_description' in data:
             entry.query_description = data['query_description']
+
+        if 'query' in data:
+            entry.query_text = data['query']
             
         db.session.commit()
         
