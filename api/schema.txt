@@ -19,6 +19,11 @@ Description: Represents dashboard data in the system.
         created_at (DATETIME)
         user_id (INTEGER, Not Null, Foreign Key -> user.id)
 
+Table: helpdesk_gen_core
+Description: Represents helpdesk data in the system.
+        title (TEXT, Primary Key)
+        query_description (TEXT, Not Null)
+
 Table: order_items
 Description: Represents order items data in the system
         item_id (INTEGER, Primary Key)

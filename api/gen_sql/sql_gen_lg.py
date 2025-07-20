@@ -37,7 +37,7 @@ def analyze_input(state:State):
   if isinstance(last_message, HumanMessage):
     content = last_message.content.lower()
     intent = 'extended_query'
-    if any(word in content for word in ["find", "get", "calculate","select"]):
+    if any(word in content for word in ["find", "get", "calculate","select","analyze","identify","list", "compare"]):
         intent = 'table_names'
     if intent == 'table_names':
       if(len(state['messages']) >= 30):

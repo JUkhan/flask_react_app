@@ -173,7 +173,7 @@ INDEX_TEMPLATE = '''
             margin-bottom:5px;
             position:absolute;
             top:65px;
-            left:700px;
+            left:800px;
         }
         .error{
             background-color: #f44336;
@@ -246,6 +246,44 @@ INDEX_TEMPLATE = '''
         .ui-menu .ui-menu-item {
             position: relative;
         }
+
+        #helpdesk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #helpdesk-table th, #helpdesk-table td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            text-align: left;
+        }
+        #helpdesk-table th {
+            background-color: #007bff;
+            color: white;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        #helpdesk-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        #helpdesk-table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+        #helpdesk-table button {
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-size: 14px;
+        }
+        .edit-btn {
+            background-color: #ffc107;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -256,6 +294,7 @@ INDEX_TEMPLATE = '''
             <div class="tab active" onclick="showTab('schema')">Schema</div>
             <div class="tab" onclick="showTab('descriptions')">Table Descriptions</div>
             <div class="tab" onclick="showTab('comments')">Column Comments</div>
+            <div class="tab" onclick="showTab('helpdesk')">Help Desk</div>
         </div>
         
         <div id="schema" class="tab-content active">
@@ -301,6 +340,35 @@ INDEX_TEMPLATE = '''
             </div>
             <button onclick="addComment()">Add Comment</button>
             <div id="comments-list"></div>
+        </div>
+
+        <div id="helpdesk" class="tab-content">
+            <h2>Help Desk</h2>
+            <button onclick="openHelpDeskModal()">Add New Entry</button>
+            <table id="helpdesk-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Query Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="helpdesk-modal" title="Help Desk Entry" style="display:none;">
+            <form id="helpdesk-form">
+                <input type="hidden" id="helpdesk-title-hidden">
+                <div class="form-group">
+                    <label for="helpdesk-title">Title</label>
+                    <input type="text" id="helpdesk-title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="helpdesk-query-description">Query Description</label>
+                    <textarea id="helpdesk-query-description" name="query_description" required></textarea>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -526,7 +594,109 @@ INDEX_TEMPLATE = '''
                 // Initialize column name input as empty
                 setupAutocomplete('comment-column-name', [], 'Search and select column name...');
             });
+
+            loadHelpDeskData();
         });
+
+        function loadHelpDeskData() {
+            fetch('/api/helpdesk')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#helpdesk-table tbody');
+                    tableBody.innerHTML = '';
+                    data.data.forEach(entry => {
+                        const row = `
+                            <tr>
+                                <td>${entry.title}</td>
+                                <td>${entry.query_description}</td>
+                                <td>
+                                    <button class="edit-btn" onclick="editHelpDeskEntry('${entry.title}')">Edit</button>
+                                    <button class="delete-btn" onclick="deleteHelpDeskEntry('${entry.title}')">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                });
+        }
+
+        function openHelpDeskModal(title = null) {
+            const form = document.getElementById('helpdesk-form');
+            form.reset();
+            document.getElementById('helpdesk-title-hidden').value = title || '';
+
+            if (title) {
+                fetch(`/api/helpdesk/${title}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.entry) {
+                            document.getElementById('helpdesk-title').value = data.entry.title;
+                            document.getElementById('helpdesk-title').readOnly = true;
+                            document.getElementById('helpdesk-query-description').value = data.entry.query_description;
+                        }
+                    });
+            } else {
+                document.getElementById('helpdesk-title').readOnly = false;
+            }
+
+            $("#helpdesk-modal").dialog({
+                modal: true,
+                buttons: {
+                    "Save": function() {
+                        saveHelpDeskEntry();
+                        $(this).dialog("close");
+                    },
+                    Cancel: function() {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+
+        function saveHelpDeskEntry() {
+            const title = document.getElementById('helpdesk-title').value;
+            const queryDescription = document.getElementById('helpdesk-query-description').value;
+            const hiddenTitle = document.getElementById('helpdesk-title-hidden').value;
+
+            const method = hiddenTitle ? 'PUT' : 'POST';
+            const url = hiddenTitle ? `/api/helpdesk/${hiddenTitle}` : '/api/helpdesk';
+
+            fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title: title, query_description: queryDescription })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    errorMessage(data.error);
+                } else {
+                    showMessage(data.message);
+                    loadHelpDeskData();
+                }
+            });
+        }
+
+        function editHelpDeskEntry(title) {
+            openHelpDeskModal(title);
+        }
+
+        function deleteHelpDeskEntry(title) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                fetch(`/api/helpdesk/${title}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        errorMessage(data.error);
+                    } else {
+                        showMessage(data.message);
+                        loadHelpDeskData();
+                    }
+                });
+            }
+        }
     </script>
 </body>
 </html>

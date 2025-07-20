@@ -2,10 +2,11 @@ import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, 
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ChatService, Message } from '../../services/chat.service';
+import { ChatService, Message, HelpDesk } from '../../services/chat.service';
 import { DashboardService, DashboardState } from '../../services/dashboard.service';
 import { SpeechRecognitionService } from '../../services/speech-recognition.service';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { LucideAngularModule, SignalHighIcon, Loader2Icon, BarChart3, TrendingUp, DonutIcon, PieChart, Grid3X3 } from 'lucide-angular';
 import { TableComponentComponent } from '../table-component/table-component.component';
 import { LineChartComponent } from '../chart-components/line-chart/line-chart.component';
@@ -53,9 +54,10 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     })
   });
   error = computed(() => this.dashboardState().error);
-  
 
   query: string = '';
+  helpDeskResults: HelpDesk[] = [];
+  private searchTerms = new Subject<string>();
 
   constructor(
     private chatService: ChatService,
@@ -66,6 +68,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.transcriptSubscription = this.speechRecognitionService.transcript$.subscribe(
       transcript => {
         this.inputValue = transcript;
+        this.searchTerms.next(this.inputValue);
       }
     );
     this.errorSubscription = this.speechRecognitionService.error$.subscribe(
@@ -81,12 +84,25 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.dashboardState.set(state);
       this.query = state.query;
     });
+
+    this.searchTerms.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((term: string) => this.chatService.searchHelpDesk(term))
+    ).subscribe(results => {
+      this.helpDeskResults = results;
+    });
   }
 
   ngAfterViewChecked(): void {
     if (!this.preventScroll) {
       this.scrollToBottom();
     }
+  }
+
+  onInputChange(value: string): void {
+    this.inputValue = value;
+    this.searchTerms.next(value);
   }
 
   private loadChatHistory(): void {
@@ -130,6 +146,12 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.isOpen = false;
   }
 
+  helpDeskAction(queryDescription: string): void {
+    this.inputValue = queryDescription;
+    this.handleSendMessage();
+    this.helpDeskResults = [];
+  }
+
   handleSendMessage(): void {
     if (this.inputValue.trim() === '') return;
 
@@ -145,6 +167,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.inputValue = '';
     this.isTyping = true;
     this.preventScroll = false;
+    this.helpDeskResults = [];
 
     // Send message to backend
     const threadId = sessionStorage.getItem('userId') || '123';
@@ -252,5 +275,6 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   ngOnDestroy() {
     this.transcriptSubscription.unsubscribe();
     this.errorSubscription.unsubscribe();
+    this.searchTerms.unsubscribe();
   }
 }

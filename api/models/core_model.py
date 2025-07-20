@@ -49,3 +49,14 @@ class Dashboard(db.Model):
             'created_at': self.created_at.isoformat(),
             'user_id': self.user_id
         }
+
+class HelpDesk(db.Model):
+    __tablename__ = 'helpdesk_gen_core'
+    title = db.Column(db.Text, primary_key=True)
+    query_description = db.Column(db.Text, nullable=False)
+    
+    def to_dict(self):
+        return {
+            'title': self.title,
+            'query_description': self.query_description
+        }
