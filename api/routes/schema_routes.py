@@ -174,6 +174,7 @@ INDEX_TEMPLATE = '''
             position:absolute;
             top:65px;
             left:800px;
+            z-index:1000;
         }
         .error{
             background-color: #f44336;
