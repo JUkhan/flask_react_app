@@ -116,10 +116,12 @@ export class DashboardService {
 
     // Handle empty data
     if (!data || data.length === 0 || error) {
-      console.warn(error);
-      let errorMessage = error || 'No data found for the given query';
-      if (errorMessage.includes('Internal Server Error')) {
+
+      let errorMessage = error;
+      if (error) {
         errorMessage = 'Your query description is not sufficient to generate a valid query. Please provide more details.';
+      } else {
+        errorMessage = 'No data found for the provided query. Please check your query and try again.';
       }
       this.setTypesAndData([], [], query, [], errorMessage);
       return;

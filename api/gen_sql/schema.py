@@ -221,6 +221,7 @@ def filter_schemas_by_table_names(table_names_str, schemas):
     # Convert comma-separated string to list and strip whitespace
     table_names = [name.strip() for name in table_names_str.split(',')]
     
+    if(len(table_names)>20): return ''
     # Split the schemas into individual table definitions
     schema_lines = schemas.split('\n')
     

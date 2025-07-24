@@ -202,7 +202,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
         const botResponse: Message = {
           id: this.messages.length + 1,
-          text: data.query ? data.query : 'Your query description is not sufficient to generate a valid query.',
+          text: data.query ? data.query : 'Your query description is not sufficient to generate a valid query. Please provide more details.',
           sender: 'bot',
           hasSql: data.query ? (data.query.startsWith('SELECT') || data.query.startsWith('select')) : false,
           timestamp: new Date()
@@ -226,7 +226,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       },
       error: (error) => {
         console.error('Error sending message:', error);
-        this.dashboardService.takeDecision(error);
+        this.dashboardService.takeDecision(error.error);
         this.isTyping = false;
         this.selectedHelpDesk = null;
       }
@@ -247,8 +247,8 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       },
       error: (error) => {
         this.isLoading = false;
-        error.query = sql;
-        this.dashboardService.takeDecision(error);
+        error.error.query = sql;
+        this.dashboardService.takeDecision(error.error);
         console.error('Error executing SQL:', error);
         this.selectedHelpDesk = null; // Clear selected help desk on error
       }
