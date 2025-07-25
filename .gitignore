@@ -30,6 +30,8 @@ api/static/
 api/models/__pycache__/
 api/routes/__pycache__/
 api/schema_readers/__pycache__/
+api/rag/__pycache__/
+api/rag/models/__pycache__/
 react/node_modules/
 react/dist/
 react/dist-ssr/

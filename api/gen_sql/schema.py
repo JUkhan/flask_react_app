@@ -246,4 +246,6 @@ def filter_schemas_by_table_names(table_names_str, schemas):
             filtered_schema.append(line)
     
     # Join the lines back together
-    return '\n'.join(filtered_schema)
+    schema= '\n'.join(filtered_schema)
+    print(schema)
+    return schema

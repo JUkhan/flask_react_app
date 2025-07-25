@@ -24,7 +24,7 @@ class State(TypedDict):
   next: str # ''|query|extended_query
 
 llm = init_chat_model(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         #temperature=0.7, 
         model_provider="google_genai"
 )
