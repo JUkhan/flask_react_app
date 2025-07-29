@@ -60,7 +60,7 @@ tools_model = llm.bind_tools(tools)
 def model_call(state: State):
   print(state['messages'][-1])
   response=tools_model.invoke([
-    ('system',f'You are my AI assistant, please answer my query to the best of your ability. you can call get_schema_detail tool if you do not have enough schema to generate {db_system} query.')    
+    ('system',f'You are my AI assistant, please answer my query to the best of your ability. you can call get_schema_detail tool if you do not have enough schema to generate {db_system} query. only response on query generation.')    
   ]+state['messages'])
   state['messages']=[response]
   return state
@@ -178,7 +178,8 @@ def run_chatbot(user_input, thread_id):
         }
     else:
         initial_state = current_state.values
-
+    if(len(initial_state['messages']) >= 30):
+        del initial_state['messages'][10:]
     user_message = ('human', user_input)
     initial_state["messages"].append(user_message)
     response = app.invoke(initial_state, config=config)

@@ -33,12 +33,11 @@ def get_query_result():
         if not user_input:
             return jsonify({"error": "user_input is required"}), 400
         
-        sql = run_chatbot(user_input, thread_id)
-        print('::::',sql)
-        if not sql or sql == "Your query description is not sufficient to generate a valid query.":
-            return {'query': '', 'data': []}
-        sql = extract_sql(sql)
-        print('sql:',sql)
+        chat_res = run_chatbot(user_input, thread_id)
+        has_sql, sql = extract_sql(chat_res)
+        if not has_sql:
+            return {'query': sql, 'data': [], 'error': sql}
+        
         result = db.session.execute(text(sql))
         
         # For SELECT queries only - simpler approach
@@ -50,7 +49,7 @@ def get_query_result():
         
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {'error': str(e), 'query': sql, 'data': []}, 500
+        return {'error': 'Internal data pulling error.', 'query': sql, 'data': []}, 500
     
 @app.route("/api/get-query-result2", methods=['POST'])
 def get_query_result2():
@@ -70,5 +69,5 @@ def get_query_result2():
         
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {'error': str(e), 'data':[]}, 500
+        return {'error': 'Internal data pulling error.', 'data':[]}, 500
 

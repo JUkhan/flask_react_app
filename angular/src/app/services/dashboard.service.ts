@@ -118,9 +118,7 @@ export class DashboardService {
     if (!data || data.length === 0 || error) {
 
       let errorMessage = error;
-      if (error) {
-        errorMessage = 'Your query description is not sufficient to generate a valid query. Please provide more details.';
-      } else {
+      if (!error) {
         errorMessage = 'No data found for the provided query. Please check your query and try again.';
       }
       this.setTypesAndData([], [], query, [], errorMessage);

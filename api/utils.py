@@ -42,17 +42,15 @@ def extract_sql(text):
     match = re.search(json_regex, text)
     
     if not match:
-        return ''
+        return False, text
     
     if not match.group(1):
-        return ''
+        return False, text
     
     json_string = match.group(1).strip()
     
-    try:
-        return json_string
-    except Exception:
-        return ""
+    
+    return True, json_string
     
 if __name__ == '__main__':
     arr=['Here is the sqlite query to find all system user:', '```sqlite\nSELECT * FROM user_gen_core\n```']
