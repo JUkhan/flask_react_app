@@ -53,3 +53,12 @@ def extract_sql(text):
         return json_string
     except Exception:
         return ""
+    
+if __name__ == '__main__':
+    arr=['Here is the sqlite query to find all system user:', '```sqlite\nSELECT * FROM user_gen_core\n```']
+    if(isinstance(arr, list)):
+        print("".join(arr))
+        print(extract_sql("".join(arr)))
+    print(extract_sql("""gdgdgdg
+                      hjhkh
+                      dgdgg: ```sql select *from user;```"""))

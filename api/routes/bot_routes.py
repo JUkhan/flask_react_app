@@ -2,7 +2,7 @@ from flask import request, jsonify
 from sqlalchemy import text, inspect
 from app import app
 from database import db
-from gen_sql.sql_gen_lg import run_qgn_chatbot, get_messages
+from gen_sql.sql_gen import run_chatbot, get_messages
 from utils import extract_sql
 
 @app.route('/api/chatbot', methods=['POST'])
@@ -12,7 +12,7 @@ def chat():
     if not user_input:
         return jsonify({"error": "user_input is required"}), 400
     
-    response = run_qgn_chatbot(user_input, thread_id)
+    response = run_chatbot(user_input, thread_id)
     return jsonify({"response": response})
 
 @app.route("/api/get-bot-messages/<thread_id>")
@@ -33,8 +33,8 @@ def get_query_result():
         if not user_input:
             return jsonify({"error": "user_input is required"}), 400
         
-        sql = run_qgn_chatbot(user_input, thread_id)
-        
+        sql = run_chatbot(user_input, thread_id)
+        print('::::',sql)
         if not sql or sql == "Your query description is not sufficient to generate a valid query.":
             return {'query': '', 'data': []}
         sql = extract_sql(sql)
