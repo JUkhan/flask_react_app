@@ -31,6 +31,7 @@ llm = init_chat_model(
 @tool
 def get_schema_detail(query_description: str):
   """This is a schema detail function that generates appropriate schema based on the query description"""
+  
   system_message = SystemMessage(content="you are my assistant, please answer my question to the best of your ability.")
   human_message = HumanMessage(content=f"""
      Given this database table names with description([tableName] - [description]):
@@ -43,9 +44,9 @@ def get_schema_detail(query_description: str):
 
     Please provide only the comma separated table names without any explanations.
     """)  
-                            
+                        
   reply = llm.invoke([system_message, human_message])
-  print('TABLES:',reply.content)
+  print('TABLES::',reply.content)
   schema = filter_schemas_by_table_names(reply.content, get_schema())
  
   if not schema:
@@ -58,9 +59,8 @@ tools=[get_schema_detail]
 tools_model = llm.bind_tools(tools)
 
 def model_call(state: State):
-  print(state['messages'][-1])
   response=tools_model.invoke([
-    ('system',f'You are my AI assistant, please answer my query to the best of your ability. you can call get_schema_detail tool if you do not have enough schema to generate {db_system} query. only response on query generation.')    
+    ('system',f'You are my AI assistant, please answer my query to the best of your ability. call get_schema_detail tool if you do not have enough schema to generate {db_system} query. only response on query generation.')    
   ]+state['messages'])
   state['messages']=[response]
   return state
@@ -131,7 +131,7 @@ def run_chatbot_test(user_input, thread_id):
     return output
 
 def extract(text):
-    json_regex = r'```(?:sqlite|sql)\s*([\s\S]*?)\s*```'
+    json_regex = r'```(?:sqlite|sql|postgresql)\s*([\s\S]*?)\s*```'
     if(isinstance(text, list)):
         text = "".join(text)
     match = re.search(json_regex, text)

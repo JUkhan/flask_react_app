@@ -170,8 +170,8 @@ def append_to_file(content, file_path='schema.txt', newline=True):
 
 
 def get_schema(fileName='schema.txt'):
-    with open(fileName, 'r') as file:
-      schema = file.read()
+    with open(fileName, 'r', encoding='utf-8') as file:
+        schema = file.read()
     return schema
 
 def extract_table_names(schemas):
@@ -189,7 +189,7 @@ def extract_table_names(schemas):
     
     # Split the schemas into lines
     lines = schemas.split('\n')
-    
+    column_description=[]
     # Look for lines starting with "Table: "
     for idx, line in enumerate(lines):
         line = line.strip()
@@ -198,9 +198,22 @@ def extract_table_names(schemas):
             nextLine=lines[idx+1].strip()
             table_name = line[6:].strip()
             if nextLine.startswith('Description:'):
+                if column_description:
+                    table_names[-1] =f'{table_names[-1]}. It also have some columns description:  {'., '.join(column_description)}'
+                    column_description.clear()
                 table_names.append(f'{table_name} - {nextLine[12:].strip()}')
             else:
                 table_names.append(f'{table_name} - ')
+        else:
+            idx=line.find(' - ')
+            if idx!=-1:
+                comment=line[idx+2:].strip()
+                if comment:
+                    column_description.append(comment)
+    if column_description:
+        table_names[-1] =f'{table_names[-1]}. It also have some columns description: {'., '.join(column_description)}'
+        column_description.clear()
+
     
     # Join the table names with commas
     return '\n'.join(table_names)
