@@ -57,10 +57,10 @@ def get_schema_detail(query_description: str):
 tools=[get_schema_detail]
 
 tools_model = llm.bind_tools(tools)
-
+#
 def model_call(state: State):
   response=tools_model.invoke([
-    ('system',f'You are my AI assistant, please answer my query to the best of your ability. call get_schema_detail tool if you do not have enough schema to generate {db_system} query. only response on query generation.')    
+    ('system',f'You are my AI assistant, please answer my query to the best of your ability. call get_schema_detail tool if you do not have enough schema to generate {db_system} query. When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name. Only response on query generation.')    
   ]+state['messages'])
   state['messages']=[response]
   return state
