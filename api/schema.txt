@@ -45,7 +45,7 @@ Description: represents house hold information of cohort 3 or fiscal year 3
         c19 (TEXT) - C19: How many of the female HH members are aged 12-35 years? int
         c2 (TEXT) - C2: Does the HH have any ID number provided by the government or national authority? option No,Yes
         c2_text (TEXT)
-        c20 (TEXT) - C20: How many HH members are 3-4 years old? text -> int
+        c20 (TEXT) - C20: represents children who are 3-4 years old. text -> int
         c21 (TEXT) - C21: Out of the children aged 3-4, how many are currently attending preschool/day-care/ECD center? int
         c22 (TEXT) - C22: Out of the children aged 3-4, how many are currently not  attending preschool/day-care/ECD center? int
         c3 (TEXT) - C3: Please specify the ID number provided int

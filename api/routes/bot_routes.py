@@ -49,7 +49,7 @@ def get_query_result():
         
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {'error': 'Internal data pulling error.', 'query': sql, 'data': []}, 500
+        return {'error': 'Internal data pulling error.', 'detail':str(e), 'query': sql, 'data': []}, 500
     
 @app.route("/api/get-query-result2", methods=['POST'])
 def get_query_result2():
@@ -69,5 +69,5 @@ def get_query_result2():
         
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {'error': 'Internal data pulling error.', 'data':[]}, 500
+        return {'error': 'Internal data pulling error.', 'detail':str(e), 'data':[]}, 500
 

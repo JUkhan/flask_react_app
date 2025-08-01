@@ -24,7 +24,7 @@ class State(TypedDict):
 
 llm = init_chat_model(
         model="gemini-2.5-flash",
-        #temperature=0.7, 
+        temperature=0, 
         model_provider="google_genai"
 )
 
@@ -58,10 +58,24 @@ tools=[get_schema_detail]
 
 tools_model = llm.bind_tools(tools)
 #
-def model_call(state: State):
-  response=tools_model.invoke([
-    ('system',f'You are my AI assistant, please answer my query to the best of your ability. call get_schema_detail tool if you do not have enough schema to generate {db_system} query. When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name. Only response on query generation.')    
-  ]+state['messages'])
+def agent(state: State):
+  system_message=f"""
+  You are my AI assistant, please answer my query to the best of your ability.
+  use 'get_schema_detail' tool if you do not have enough schema to generate {db_system} query.
+  When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name.
+  Only response on query generation.
+  """
+  messages = list(state['messages'])
+  if messages[-1].content.strip()=='retry':
+     for it in messages[::-1]:
+        if it.content not in ['retry'] and isinstance(it, HumanMessage):
+           messages=[it]
+           break
+     
+  response=tools_model.invoke([('system', system_message)] + messages)
+  # if hasattr(response, 'tool_calls') and response.tool_calls:
+  #    print(f'USING TOOLS: {[tc['name'] for tc in response.tool_calls]}')
+
   state['messages']=[response]
   return state
 
@@ -75,7 +89,7 @@ def should_continue(state:State):
 
 graph=StateGraph(State)
 
-graph.add_node('our-agent', model_call)
+graph.add_node('agent', agent)
 
 tool_node = ToolNode(tools=tools)
 
@@ -83,10 +97,10 @@ graph.add_node('tools', tool_node)
 
 # edges
 
-graph.add_edge(START, 'our-agent')
+graph.add_edge(START, 'agent')
 
 graph.add_conditional_edges(
-  'our-agent',
+  'agent',
   should_continue,
   {
     'continue': 'tools',
@@ -94,7 +108,7 @@ graph.add_conditional_edges(
   }
 )
 
-graph.add_edge('tools', 'our-agent')
+graph.add_edge('tools', 'agent')
 
 print("Graph nodes:", graph.nodes.keys())
 app = graph.compile(checkpointer=InMemorySaver())
