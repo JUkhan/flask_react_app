@@ -113,6 +113,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.chatService.getBotMessages(userId).subscribe({
       next: (data) => {
         if (data.messages && data.messages.length > 0) {
+          if (data.messages.length === 1 && data.messages[0].text === 'New conversation started') return;
           const initialMessages = data.messages.map((msg: any, index: number) => ({
             id: index + 1,
             text: msg.text,
@@ -175,7 +176,10 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
     this.helpDeskResults = [];
   }
-
+  startNewConversation(): void {
+    this.inputValue = 'new conversation';
+    this.handleSendMessage();
+  }
   handleSendMessage(): void {
     if (this.inputValue.trim() === '') return;
 
@@ -198,6 +202,11 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.chatService.sendMessage(userInput, threadId).subscribe({
       next: (data) => {
         console.log('Bot response:', data);
+        if (data.query === 'New conversation started') {
+          this.isTyping = false;
+          this.messages = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot', timestamp: new Date() }];
+          return;
+        }
         this.dashboardService.takeDecision(data);
 
         const botResponse: Message = {

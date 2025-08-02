@@ -57,18 +57,23 @@ def get_schema_detail(query_description: str):
 tools=[get_schema_detail]
 
 tools_model = llm.bind_tools(tools)
-#
+
 def agent(state: State):
   system_message=f"""
   You are my AI assistant, please answer my query to the best of your ability.
-  use 'get_schema_detail' tool if you do not have enough schema to generate {db_system} query.
+  call get_schema_detail tool if you do not have enough schema to generate {db_system} query.
   When writing SQL queries with aggregate functions, always assign meaningful alias names to aggregated columns using AS. For example: SELECT COUNT(*) AS total_records, AVG(price) AS average_price, SUM(quantity) AS total_quantity FROM table_name.
   Only response on query generation.
   """
   messages = list(state['messages'])
-  if messages[-1].content.strip()=='retry':
+  last_message = messages[-1].content.strip().lower()
+  if last_message == 'new conversation':
+     state['messages'].clear()
+     state['messages'].append(AIMessage('New conversation started'))
+     return state
+  if last_message == 'retry':
      for it in messages[::-1]:
-        if it.content not in ['retry'] and isinstance(it, HumanMessage):
+        if it.content.strip().lower() !='retry' and isinstance(it, HumanMessage):
            messages=[it]
            break
      
@@ -192,8 +197,8 @@ def run_chatbot(user_input, thread_id):
         }
     else:
         initial_state = current_state.values
-    if(len(initial_state['messages']) >= 30):
-        del initial_state['messages'][10:]
+    if(len(initial_state['messages']) >= 10):
+        del initial_state['messages'][5:]
     user_message = ('human', user_input)
     initial_state["messages"].append(user_message)
     response = app.invoke(initial_state, config=config)
