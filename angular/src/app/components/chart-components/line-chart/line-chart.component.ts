@@ -18,9 +18,11 @@ export class LineChartComponent implements OnInit, OnChanges {
   @Input() columns: string[] = [];
   @Input() query?: string;
   @Input() type?: string;
+  @Input() isQueryEditable?: boolean;
   @Output() onRemove = new EventEmitter<any>();
   @Output() onEdit = new EventEmitter<{ id: any, title: string }>();
   @Output() onColumnsChange = new EventEmitter<string[]>();
+  @Output() onToggleQueryEditable = new EventEmitter<void>();
 
   constructor(private dashboardService: DashboardService) { }
   public lineChartData: ChartConfiguration['data'] = {
@@ -133,5 +135,9 @@ export class LineChartComponent implements OnInit, OnChanges {
 
   handleEdit(): void {
     this.onEdit.emit({ id: this.id, title: this.title });
+  }
+
+  handleToggleQueryEditable(): void {
+    this.onToggleQueryEditable.emit();
   }
 }

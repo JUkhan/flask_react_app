@@ -31,8 +31,12 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   isTyping = false;
   isLoading = false;
   preventScroll = false;
+  hasEditableComponent = false;
+  editableComponentId: any = null;
+  hasVirginEditableComponent = false;
   private transcriptSubscription: Subscription;
   private errorSubscription: Subscription;
+  private editableComponentSubscription?: Subscription;
   dashboardState = signal<DashboardState>({
     components: [],
     query: '',
@@ -85,6 +89,14 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       console.log('Dashboard state updated:::::', state, this.messages);
       this.dashboardState.set(state);
       this.query = state.query;
+    });
+
+    // Subscribe to editable component changes
+    this.editableComponentSubscription = this.dashboardService.editableComponentId$.subscribe(id => {
+      this.hasEditableComponent = id !== null;
+      this.hasVirginEditableComponent = id !== null;
+      this.editableComponentId = id;
+      console.log('Editable component ID updated:', id);
     });
 
     this.searchTerms.pipe(
@@ -180,6 +192,10 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.inputValue = 'new conversation';
     this.handleSendMessage();
   }
+  findSqlByEditableComponentId(id: any): string | null {
+    const component = this.dashboardState().components.find(comp => comp.id === id);
+    return component ? component.query : null;
+  }
   handleSendMessage(): void {
     if (this.inputValue.trim() === '') return;
 
@@ -191,12 +207,19 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     };
 
     this.messages.push(newMessage);
-    const userInput = this.inputValue;
+    let userInput = this.inputValue;
     this.inputValue = '';
     this.isTyping = true;
     this.preventScroll = false;
     this.helpDeskResults = [];
-
+    if (this.editableComponentId && this.hasVirginEditableComponent) {
+      const sql = this.findSqlByEditableComponentId(this.editableComponentId);
+      if (sql) {
+        userInput = `Based on the following SQL query: ${sql}, please regenerate the query adding following statement: ${userInput}`;
+      }
+      console.log('Using SQL from editable component:', sql, userInput);
+      this.hasVirginEditableComponent = false;
+    }
     // Send message to backend
     const threadId = sessionStorage.getItem('userId') || '123';
     this.chatService.sendMessage(userInput, threadId).subscribe({
@@ -282,22 +305,46 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
+  disableQueryEditMode(): void {
+    if (this.editableComponentId) {
+      this.dashboardService.toggleQueryEditable(this.editableComponentId);
+    }
+  }
+
   addComponent(type: string): void {
     console.log('Adding component of type:', type);
     const componentType = this.components().find((ct: any) => ct.type === type);
     const dashboard = this.dashboardService.getDashboard();
     if (componentType && dashboard.columns.length > 0) {
       const newComponent = {
-        id: Number(new Date().getTime()),
+        id: String(new Date().getTime()),
         type: type as any,
         title: componentType.name,
         query: dashboard.query || '',
         data: dashboard.data,
         columns: dashboard.columns,
+        isQueryEditable: false,
         user_id: sessionStorage.getItem('userId') || ''
       };
 
       console.log('Adding new component:', newComponent);
+      if (this.hasEditableComponent) {
+        const oldComponent = this.findSqlByEditableComponentId(this.editableComponentId);
+        if (oldComponent) {
+          newComponent.id = this.editableComponentId;
+          newComponent.isQueryEditable = true;;
+          this.dashboardService.updateComponent(newComponent);
+          const serverComponent = { ...newComponent };
+          (serverComponent as any).columns = (serverComponent.columns || []).join(',');
+          delete (serverComponent as any).data;
+          this.dashboardService.updateDashboardComponent(serverComponent.id, serverComponent).subscribe({
+            next: (response) => {
+              console.log('Component updated on server:', response);
+            }
+          });
+          return;
+        }
+      }
       this.dashboardService.addComponent(newComponent);
 
       // Save to server if user is logged in
@@ -325,5 +372,8 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.transcriptSubscription.unsubscribe();
     this.errorSubscription.unsubscribe();
     this.searchTerms.unsubscribe();
+    if (this.editableComponentSubscription) {
+      this.editableComponentSubscription.unsubscribe();
+    }
   }
 }

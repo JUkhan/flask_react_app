@@ -10,6 +10,7 @@ export interface SComponent {
   data?: any[];
   columns?: string[];
   user_id?: any;
+  isQueryEditable?: boolean;
 }
 
 export interface DashboardState {
@@ -37,6 +38,9 @@ export class DashboardService {
   });
 
   public dashboard$ = this.dashboardState.asObservable();
+
+  private editableComponentId = new BehaviorSubject<any>(null);
+  public editableComponentId$ = this.editableComponentId.asObservable();
 
   constructor(private http: HttpClient) { }
 
@@ -72,6 +76,28 @@ export class DashboardService {
         comp.id === updatedComponent.id ? updatedComponent : comp
       )
     });
+  }
+
+  toggleQueryEditable(componentId: any): void {
+    const currentState = this.dashboardState.value;
+    const isCurrentlyEditable = currentState.components.find(c => c.id === componentId)?.isQueryEditable;
+
+    const updatedComponents = currentState.components.map(comp => ({
+      ...comp,
+      isQueryEditable: comp.id === componentId ? !isCurrentlyEditable : false
+    }));
+
+    this.dashboardState.next({
+      ...currentState,
+      components: updatedComponents
+    });
+
+    const newEditableId = !isCurrentlyEditable ? componentId : null;
+    this.editableComponentId.next(newEditableId);
+  }
+
+  getEditableComponentId(): any {
+    return this.editableComponentId.value;
   }
 
   setTypesAndData(types: string[], data: any[], query: string, columns: string[], error: string | null = null): void {

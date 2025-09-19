@@ -84,6 +84,12 @@ def update_dashboard(dashboard_id):
             dashboard.title=data['title']
         if 'columns' in data:
             dashboard.columns=data['columns']
+        if 'query' in data:
+            dashboard.query = data['query']
+        if 'type' in data:
+            dashboard.type = data['type']
+        if 'user_id' in data:
+            dashboard.user_id = data['user_id']
         
         db.session.commit()
         

@@ -90,8 +90,10 @@
             [columns]="component.columns || []"
             [type]="component.type"
             [query]="component.query"
+            [isQueryEditable]="component.isQueryEditable"
             (onRemove)="removeComponent(component.id)"
             (onEdit)="startEditing(component.id, component.title)"
+            (onToggleQueryEditable)="toggleQueryEditable(component.id)"
           ></app-line-chart>
 
           <!-- Bar Chart -->
@@ -103,8 +105,10 @@
             [columns]="component.columns || []"
             [type]="component.type"
             [query]="component.query"
+            [isQueryEditable]="component.isQueryEditable"
             (onRemove)="removeComponent(component.id)"
             (onEdit)="startEditing(component.id, component.title)"
+            (onToggleQueryEditable)="toggleQueryEditable(component.id)"
           ></app-bar-chart>
 
           <!-- Pie Chart -->
@@ -116,8 +120,10 @@
             [query]="component.query"
             [columns]="component.columns || []"
             [type]="component.type"
+            [isQueryEditable]="component.isQueryEditable"
             (onRemove)="removeComponent(component.id)"
             (onEdit)="startEditing(component.id, component.title)"
+            (onToggleQueryEditable)="toggleQueryEditable(component.id)"
           ></app-pie-chart>
 
           <!-- Donut Chart (using pie chart component) -->
@@ -129,8 +135,10 @@
             [query]="component.query"
             [columns]="component.columns || []"
             [type]="component.type"
+            [isQueryEditable]="component.isQueryEditable"
             (onRemove)="removeComponent(component.id)"
             (onEdit)="startEditing(component.id, component.title)"
+            (onToggleQueryEditable)="toggleQueryEditable(component.id)"
           ></app-pie-chart>
 
           <!-- Table Component -->
@@ -142,9 +150,11 @@
             [columns]="component.columns || []"
             [query]="component.query"
             [type]="component.type"
+            [isQueryEditable]="component.isQueryEditable"
             (onRemove)="removeComponent(component.id)"
             (onEdit)="startEditing(component.id, component.title)"
             (onColumnsChange)="handleColumnsChange(component.id, $event)"
+            (onToggleQueryEditable)="toggleQueryEditable(component.id)"
           ></app-table-component>
 
           <!-- Fallback for unknown component types -->

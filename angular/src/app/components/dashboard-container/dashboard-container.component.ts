@@ -29,7 +29,9 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   editingComponent: any = null;
   editTitle = '';
   isAdding = false;
+  editableComponentId: any = null;
   private dashboardSubscription?: Subscription;
+  private editableComponentSubscription?: Subscription;
 
   constructor(private dashboardService: DashboardService) { }
 
@@ -41,6 +43,11 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
       this.isAdding = dashboard.data.length > 0;
     });
 
+    // Subscribe to editable component changes
+    this.editableComponentSubscription = this.dashboardService.editableComponentId$.subscribe(id => {
+      this.editableComponentId = id;
+    });
+
     // Load existing dashboard data
     this.loadDashboardData();
   }
@@ -48,6 +55,9 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.dashboardSubscription) {
       this.dashboardSubscription.unsubscribe();
+    }
+    if (this.editableComponentSubscription) {
+      this.editableComponentSubscription.unsubscribe();
     }
   }
 
@@ -214,5 +224,9 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
         });
       }
     }
+  }
+
+  toggleQueryEditable(componentId: any): void {
+    this.dashboardService.toggleQueryEditable(componentId);
   }
 }
