@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -18,18 +18,19 @@ import { PieChartComponent } from '../chart-components/pie-chart/pie-chart.compo
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './chat.component.html',
-  styleUrls: ['./chat.component.css']
+  styleUrls: ['./chat.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
 
   isOpen = false;
-  messages: Message[] = [
+  messages = signal<Message[]>([
     { id: 1, text: 'Hello! How can I help you today?', sender: 'bot', timestamp: new Date() },
-  ];
+  ]);
   inputValue = '';
   isTyping = false;
-  isLoading = false;
+  isLoading = signal(false);
   preventScroll = false;
   hasEditableComponent = false;
   editableComponentId: any = null;
@@ -37,7 +38,6 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   private isComponentUpdated = false;
   private transcriptSubscription: Subscription;
   private errorSubscription: Subscription;
-  private editableComponentSubscription?: Subscription;
   dashboardState = signal<DashboardState>({
     components: [],
     query: '',
@@ -82,48 +82,49 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         console.error(error);
       }
     );
-  }
 
-  ngOnInit(): void {
-    this.loadChatHistory();
-    this.dashboardService.dashboardState.subscribe(state => {
-      console.log('Dashboard state updated:::::', state, this.messages);
+    // Use effect to react to dashboard state changes (must be in constructor)
+    effect(() => {
+      const state = this.dashboardService.dashboardState();
+      console.log('Dashboard state updated:::::', state);
       this.dashboardState.set(state);
       this.query = state.query;
+
       if (state.types.length > 0 && state.types.includes('error')) {
         const botResponse: Message = {
-          id: this.messages.length + 1,
+          id: this.messages().length + 1,
           text: state.error!,
           sender: 'bot',
           hasSql: false,
           timestamp: new Date()
         };
-
-        this.messages.push(botResponse);
+        this.messages.update(msgs => [...msgs, botResponse]);
       }
 
       if (!state.error && this.hasEditableComponent) {
         const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId);
         if (component && !this.isComponentUpdated && this.components().some(com => com.type === component.type)) {
-          this.isComponentUpdated = true;
           this.addComponent(component.type);
-
+          this.isComponentUpdated = true;
         }
       }
+    }, { allowSignalWrites: true });
 
-    });
-
-    // Subscribe to editable component changes
-    this.editableComponentSubscription = this.dashboardService.editableComponentId$.subscribe(id => {
+    // Use effect to react to editable component changes (must be in constructor)
+    effect(() => {
+      const id = this.dashboardService.editableComponentId();
       this.hasEditableComponent = id !== null;
       this.hasVirginEditableComponent = id !== null;
       this.editableComponentId = id;
       console.log('Editable component ID updated:', id);
-    });
+    }, { allowSignalWrites: true });
+  }
+
+  ngOnInit(): void {
+    this.loadChatHistory();
 
     this.searchTerms.pipe(
       debounceTime(300),
-      //distinctUntilChanged(),
       switchMap((term: string) => this.chatService.searchHelpDesk(term))
     ).subscribe(results => {
       this.helpDeskResults = results;
@@ -154,7 +155,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             hasSql: msg.sender === 'bot' ? (msg.text.startsWith('SELECT') || msg.text.startsWith('select')) : false,
             timestamp: new Date()
           }));
-          this.messages = this.chatService.sync(initialMessages);
+          this.messages.set(this.chatService.sync(initialMessages));
         }
       },
       error: (error) => {
@@ -192,7 +193,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         sender: 'user',
         timestamp: new Date(),
       };
-      this.messages.push(newMessage);
+      this.messages.update(msgs => [...msgs, newMessage]);
       const botResponse: Message = {
         id: this.messages.length + 1,
         text: helpDesk.query,
@@ -200,7 +201,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         hasSql: true,
         timestamp: new Date()
       };
-      this.messages.push(botResponse);
+      this.messages.update(msgs => [...msgs, botResponse]);
       this.loadSqlData(helpDesk.query);
       this.inputValue = '';
     } else {
@@ -227,7 +228,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       timestamp: new Date(),
     };
 
-    this.messages.push(newMessage);
+    this.messages.update(msgs => [...msgs, newMessage]);
     let userInput = this.inputValue;
     this.inputValue = '';
     this.isTyping = true;
@@ -249,20 +250,20 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         console.log('Bot response:', data);
         if (data.query === 'New conversation started') {
           this.isTyping = false;
-          this.messages = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot', timestamp: new Date() }];
+          this.messages.set([{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot', timestamp: new Date() }]);
           return;
         }
         this.dashboardService.takeDecision(data);
 
         const botResponse: Message = {
-          id: this.messages.length + 1,
+          id: this.messages().length + 1,
           text: data.query ? data.query : 'Your query description is not sufficient to generate a valid query. Please provide more details.',
           sender: 'bot',
           hasSql: data.query ? (data.query.startsWith('SELECT') || data.query.startsWith('select')) : false,
           timestamp: new Date()
         };
 
-        this.messages.push(botResponse);
+        this.messages.update(msgs => [...msgs, botResponse]);
         this.isTyping = false;
         if (data.query && this.selectedHelpDesk) {
           this.selectedHelpDesk.query = data.query;
@@ -290,19 +291,19 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   loadSqlData(sql: string): void {
     if (!sql) return;
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.isComponentUpdated = false;
     this.preventScroll = this.selectedHelpDesk === null ? true : false;
     this.chatService.executeQuery(sql).subscribe({
       next: (data) => {
         console.log('SQL execution result:', data);
-        this.isLoading = false;
+        this.isLoading.set(false);
         data.query = sql;
         this.dashboardService.takeDecision(data);
         this.selectedHelpDesk = null; // Clear selected help desk after execution
       },
       error: (error) => {
-        this.isLoading = false;
+        this.isLoading.set(false);
         error.error.query = sql;
         error.error.bot = false;
         this.dashboardService.takeDecision(error.error);
@@ -397,8 +398,6 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.transcriptSubscription.unsubscribe();
     this.errorSubscription.unsubscribe();
     this.searchTerms.unsubscribe();
-    if (this.editableComponentSubscription) {
-      this.editableComponentSubscription.unsubscribe();
-    }
+    // Effects are automatically cleaned up
   }
 }

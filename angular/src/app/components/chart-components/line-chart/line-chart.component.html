@@ -1,16 +1,15 @@
 <div class="bg-white p-6 rounded-lg shadow-lg group">
   <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+    <h3 class="text-lg font-semibold text-gray-900">{{ title() }}</h3>
     <div
       class="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity"
     >
       <button
         (click)="handleToggleQueryEditable()"
-        [class]="
-          isQueryEditable
-            ? 'text-red-500 hover:text-red-700'
-            : 'text-gray-400 hover:text-gray-600'
-        "
+        [ngClass]="{
+          'text-red-500 hover:text-red-700': isQueryEditable(),
+          'text-gray-400 hover:text-gray-600': !isQueryEditable()
+        }"
         class="transition-colors"
         title="Toggle query editing"
       >
@@ -85,7 +84,7 @@
     </canvas>
   </div>
 
-  <div *ngIf="!data || data.length === 0" class="text-center py-8">
+  <div *ngIf="!data() || data().length === 0" class="text-center py-8">
     <p class="text-gray-500">No data available for chart</p>
   </div>
 </div>

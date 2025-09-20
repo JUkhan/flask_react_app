@@ -1,7 +1,6 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges } from '@angular/core';
+import { Component, input, output, model, OnInit, ChangeDetectionStrategy, effect, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DashboardComponent } from '../dashboard/dashboard.component';
 import { DashboardService } from '../../services/dashboard.service';
 import { PagerComponent } from './pager.component';
 
@@ -10,81 +9,109 @@ import { PagerComponent } from './pager.component';
   standalone: true,
   imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './table-component.component.html',
-  styleUrls: ['./table-component.component.css']
+  styleUrls: ['./table-component.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TableComponentComponent implements OnInit, OnChanges {
-  @Input() id?: any;
-  @Input() title = 'Table';
-  @Input() data: any[] = [];
-  @Input() columns: string[] = [];
-  @Input() query?: string;
-  @Input() type?: string;
-  @Input() isQueryEditable?: boolean;
-  @Output() onRemove = new EventEmitter<any>();
-  @Output() onEdit = new EventEmitter<{ id: any, title: string }>();
-  @Output() onColumnsChange = new EventEmitter<string[]>();
-  @Output() onToggleQueryEditable = new EventEmitter<void>();
+export class TableComponentComponent implements OnInit {
+  // Model signals for two-way binding (can be modified)
+  readonly data = model<any[]>([]);
+  readonly columns = model<string[]>([]);
 
-  displayColumns: string[] = [];
-  page = '';
-  // Pagination properties
-  currentPage = 1;
-  pageSize = 3;
+  // Regular inputs (read-only)
+  readonly id = input<any>();
+  readonly title = input<string>('Table');
+  readonly query = input<string>();
+  readonly type = input<string>();
+  readonly isQueryEditable = input<boolean>();
+
+  // Signal outputs
+  readonly onRemove = output<any>();
+  readonly onEdit = output<{ id: any, title: string }>();
+  readonly onColumnsChange = output<string[]>();
+  readonly onToggleQueryEditable = output<void>();
+
+  // Internal state as signals
+  displayColumns = signal<string[]>([]);
+  page = signal('');
+  // Pagination properties as signals
+  currentPage = signal(1);
+  pageSize = signal(3);
   pageSizeOptions = [3, 10, 25, 50];
-  paginatedData: any[] = [];
-  totalPages = 0;
-  constructor(private dashboardService: DashboardService) { }
+  totalPages = signal(0);
   // Drag and drop properties
-  draggedColumnIndex: number | null = null;
-  isDragging = false;
+  draggedColumnIndex = signal<number | null>(null);
+  isDragging = signal(false);
+
+  // Computed values
+  paginatedData = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize();
+    const end = start + this.pageSize();
+    return this.data().slice(start, end);
+  });
+
+
+  constructor(private dashboardService: DashboardService) {
+    // React to input changes
+    effect(() => {
+      const data = this.data();
+      const columns = this.columns();
+      console.log('Table data/columns changed:', data, columns);
+      this.updateDisplayColumns();
+      this.updatePagination();
+    }, { allowSignalWrites: true });
+
+    // Track isQueryEditable changes
+    effect(() => {
+      const editable = this.isQueryEditable();
+      console.log(`Table ${this.id()} - isQueryEditable changed to:`, editable);
+    });
+  }
 
   ngOnInit(): void {
-    this.updateDisplayColumns();
-    if (this.data && this.data.length === 0) {
-      this.dashboardService.getQueryResult2(this.query || '').subscribe(res => {
-        this.data = res.data || [];
-        this.updateDisplayColumns();
-        this.updatePagination();
-      })
+    const data = this.data();
+    const query = this.query();
+    console.log('TableComponent initialized with data::::>', data);
+    if (data && data.length === 0 && query) {
+      this.dashboardService.getQueryResult2(query).subscribe(res => {
+        console.log('Query result for table component:', res);
+        // Now we can update data since it's a model signal
+        if (res.data) {
+          this.data.set(res.data);
+          this.updateDisplayColumns();
+          this.updatePagination();
+        }
+      });
     }
   }
 
-  ngOnChanges(): void {
-    this.updateDisplayColumns();
-  }
-
   private updateDisplayColumns(): void {
-    if (this.columns && this.columns.length > 0) {
-      this.displayColumns = this.columns;
-    } else if (this.data && this.data.length > 0) {
-      this.displayColumns = Object.keys(this.data[0]);
+    const columns = this.columns();
+    const data = this.data();
+    if (columns && columns.length > 0) {
+      this.displayColumns.set([...columns]);
+    } else if (data && data.length > 0) {
+      this.displayColumns.set(Object.keys(data[0]));
     }
     this.updatePagination();
   }
 
   // Pagination methods
   updatePagination(): void {
-    this.totalPages = Math.ceil(this.data.length / this.pageSize);
-    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
-    this.updatePaginatedData();
-  }
-
-  updatePaginatedData(): void {
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
-    console.log(`Updating paginated data from index ${startIndex} to ${endIndex}`);
-    this.paginatedData = this.data.slice(startIndex, endIndex);
+    const data = this.data();
+    const pageSize = this.pageSize();
+    const totalPages = Math.ceil(data.length / pageSize);
+    this.totalPages.set(totalPages);
+    this.currentPage.update(current => Math.min(current, totalPages || 1));
   }
 
   goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-      this.updatePaginatedData();
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
     }
   }
 
   previousPage(): void {
-    this.goToPage(this.currentPage - 1);
+    this.goToPage(this.currentPage() - 1);
   }
 
   handlePageChange(page: number): void {
@@ -92,12 +119,12 @@ export class TableComponentComponent implements OnInit, OnChanges {
   }
 
   nextPage(): void {
-    this.goToPage(this.currentPage + 1);
+    this.goToPage(this.currentPage() + 1);
   }
 
   onPageSizeChange(): void {
-    this.currentPage = 1;
-    this.pageSize = +this.pageSize;
+    this.currentPage.set(1);
+    this.pageSize.update(size => +size);
     this.updatePagination();
   }
 
@@ -108,8 +135,10 @@ export class TableComponentComponent implements OnInit, OnChanges {
   getPageNumbers(): number[] {
     const pages: number[] = [];
     const maxPagesToShow = 5;
-    let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(this.totalPages, startPage + maxPagesToShow - 1);
+    const currentPage = this.currentPage();
+    const totalPages = this.totalPages();
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
@@ -123,8 +152,8 @@ export class TableComponentComponent implements OnInit, OnChanges {
 
   // Drag and drop methods
   onDragStart(event: DragEvent, columnIndex: number): void {
-    this.draggedColumnIndex = columnIndex;
-    this.isDragging = true;
+    this.draggedColumnIndex.set(columnIndex);
+    this.isDragging.set(true);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/html', event.target?.toString() || '');
@@ -140,36 +169,38 @@ export class TableComponentComponent implements OnInit, OnChanges {
 
   onDrop(event: DragEvent, targetColumnIndex: number): void {
     event.preventDefault();
+    const draggedIndex = this.draggedColumnIndex();
 
-    if (this.draggedColumnIndex !== null && this.draggedColumnIndex !== targetColumnIndex) {
-      const draggedColumn = this.displayColumns[this.draggedColumnIndex];
-      const newColumns = [...this.displayColumns];
+    if (draggedIndex !== null && draggedIndex !== targetColumnIndex) {
+      const columns = this.displayColumns();
+      const draggedColumn = columns[draggedIndex];
+      const newColumns = [...columns];
 
       // Remove the dragged column
-      newColumns.splice(this.draggedColumnIndex, 1);
+      newColumns.splice(draggedIndex, 1);
 
       // Insert at new position
       newColumns.splice(targetColumnIndex, 0, draggedColumn);
 
-      this.displayColumns = newColumns;
-      this.onColumnsChange.emit(this.displayColumns);
+      this.displayColumns.set(newColumns);
+      this.onColumnsChange.emit(newColumns);
     }
 
-    this.draggedColumnIndex = null;
-    this.isDragging = false;
+    this.draggedColumnIndex.set(null);
+    this.isDragging.set(false);
   }
 
   onDragEnd(): void {
-    this.draggedColumnIndex = null;
-    this.isDragging = false;
+    this.draggedColumnIndex.set(null);
+    this.isDragging.set(false);
   }
 
   handleRemove(): void {
-    this.onRemove.emit(this.id);
+    this.onRemove.emit(this.id());
   }
 
   handleEdit(): void {
-    this.onEdit.emit({ id: this.id, title: this.title });
+    this.onEdit.emit({ id: this.id(), title: this.title() });
   }
 
   handleToggleQueryEditable(): void {

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges } from '@angular/core';
+import { Component, input, output, model, OnInit, ChangeDetectionStrategy, effect, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartType } from 'chart.js';
@@ -9,22 +9,46 @@ import { DashboardService } from '../../../services/dashboard.service';
   standalone: true,
   imports: [CommonModule, NgChartsModule],
   templateUrl: './bar-chart.component.html',
-  styleUrls: ['./bar-chart.component.css']
+  styleUrls: ['./bar-chart.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class BarChartComponent implements OnInit, OnChanges {
-  @Input() id?: any;
-  @Input() title = 'Bar Chart';
-  @Input() data: any[] = [];
-  @Input() columns: string[] = [];
-  @Input() query?: string;
-  @Input() type?: string;
-  @Input() isQueryEditable?: boolean;
-  @Output() onRemove = new EventEmitter<any>();
-  @Output() onEdit = new EventEmitter<{ id: any, title: string }>();
-  @Output() onColumnsChange = new EventEmitter<string[]>();
-  @Output() onToggleQueryEditable = new EventEmitter<void>();
+export class BarChartComponent implements OnInit {
+  // Model signals for two-way binding
+  readonly data = model<any[]>([]);
+  readonly columns = model<string[]>([]);
 
-  constructor(private dashboardService: DashboardService) { }
+  // Regular inputs
+  readonly id = input<any>();
+  readonly title = input<string>('Bar Chart');
+  readonly query = input<string>();
+  readonly type = input<string>();
+  readonly isQueryEditable = input<boolean>();
+
+  // Signal outputs
+  readonly onRemove = output<any>();
+  readonly onEdit = output<{ id: any, title: string }>();
+  readonly onColumnsChange = output<string[]>();
+  readonly onToggleQueryEditable = output<void>();
+
+  private cdr = inject(ChangeDetectorRef);
+
+  constructor(private dashboardService: DashboardService) {
+    // React to data changes
+    effect(() => {
+      const data = this.data();
+      const columns = this.columns();
+      if (data || columns) {
+        this.updateChartData();
+      }
+    });
+
+    // Track isQueryEditable changes
+    effect(() => {
+      const editable = this.isQueryEditable();
+      console.log(`Bar chart ${this.id()} - isQueryEditable changed to:`, editable);
+      this.cdr.markForCheck();
+    });
+  }
   public barChartData: ChartConfiguration['data'] = {
     datasets: [],
     labels: []
@@ -45,31 +69,34 @@ export class BarChartComponent implements OnInit, OnChanges {
   public barChartType: ChartType = 'bar';
 
   ngOnInit(): void {
-    this.updateChartData();
-    if (this.data && this.data.length === 0) {
-      this.dashboardService.getQueryResult2(this.query || '').subscribe(res => {
-        this.data = res.data || [];
-        this.updateChartData();
-      })
+    const data = this.data();
+    const query = this.query();
+    if (data && data.length === 0 && query) {
+      this.dashboardService.getQueryResult2(query).subscribe(res => {
+        // Now we can update data since it's a model signal
+        if (res.data) {
+          this.data.set(res.data);
+          this.updateChartData();
+        }
+      });
     }
-  }
-
-  ngOnChanges(): void {
-    this.updateChartData();
   }
 
   private updateChartData(): void {
-    if (!this.data || this.data.length === 0 || !this.columns || this.columns.length < 2) {
+    const data = this.data();
+    const columns = this.columns();
+
+    if (!data || data.length === 0 || !columns || columns.length < 2) {
       return;
     }
 
-    const labels = this.data.map(item => item[this.columns[0]]);
+    const labels = data.map(item => item[columns[0]]);
     const datasets = [];
 
     // For bar charts, we typically want to show one numeric column
-    if (this.columns.length >= 2) {
-      const column = this.columns[1]; // Use the second column as the value
-      const values = this.data.map(item => {
+    if (columns.length >= 2) {
+      const column = columns[1]; // Use the second column as the value
+      const values = data.map(item => {
         const value = item[column];
         return typeof value === 'number' ? value : parseFloat(value) || 0;
       });
@@ -88,17 +115,19 @@ export class BarChartComponent implements OnInit, OnChanges {
       datasets: datasets
     };
     console.log('Bar Chart Data:', this.barChartData);
+    this.cdr.markForCheck();
   }
 
   handleRemove(): void {
-    this.onRemove.emit(this.id);
+    this.onRemove.emit(this.id());
   }
 
   handleEdit(): void {
-    this.onEdit.emit({ id: this.id, title: this.title });
+    this.onEdit.emit({ id: this.id(), title: this.title() });
   }
 
   handleToggleQueryEditable(): void {
+    console.log('Bar chart - Toggle query editable clicked, current state:', this.isQueryEditable());
     this.onToggleQueryEditable.emit();
   }
 }

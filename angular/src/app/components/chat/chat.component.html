@@ -131,7 +131,7 @@
       #messagesContainer
     >
       <div
-        *ngFor="let message of messages"
+        *ngFor="let message of messages()"
         [class]="
           'flex ' +
           (message.sender === 'user' ? 'justify-end' : 'justify-start')
@@ -147,13 +147,13 @@
         >
           <button
             *ngIf="message.hasSql && message.text !== query"
-            [disabled]="isLoading"
+            [disabled]="isLoading()"
             (click)="loadSqlData(message.text)"
             title="Click to load data"
             class="p-1 cursor-pointer opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 text-red-400 hover:text-red-600 transition-colors"
           >
             <svg
-              *ngIf="!isLoading"
+              *ngIf="!isLoading()"
               class="w-4 h-4"
               fill="none"
               stroke="currentColor"
@@ -167,7 +167,7 @@
               />
             </svg>
             <svg
-              *ngIf="isLoading"
+              *ngIf="isLoading()"
               class="w-4 h-4 animate-spin"
               fill="none"
               viewBox="0 0 24 24"

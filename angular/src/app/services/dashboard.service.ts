@@ -1,14 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 
 export interface SComponent {
   id: any;
   type: 'line' | 'bar' | 'pie' | 'table' | 'donut';
   title: string;
   query: string;
-  data?: any[];
-  columns?: string[];
+  data: any[];
+  columns: string[];
   user_id?: any;
   isQueryEditable?: boolean;
 }
@@ -28,7 +28,8 @@ export interface DashboardState {
 export class DashboardService {
   private baseUrl = '/api';
 
-  public dashboardState = new BehaviorSubject<DashboardState>({
+  // Convert to Signals
+  private dashboardStateSignal = signal<DashboardState>({
     components: [],
     types: [],
     data: [],
@@ -37,79 +38,107 @@ export class DashboardService {
     error: null
   });
 
-  public dashboard$ = this.dashboardState.asObservable();
+  // Public readonly signals
+  public readonly dashboardState = this.dashboardStateSignal.asReadonly();
 
-  private editableComponentId = new BehaviorSubject<any>(null);
-  public editableComponentId$ = this.editableComponentId.asObservable();
+  // Computed signals for specific parts of the state
+  public readonly components = computed(() => this.dashboardStateSignal().components);
+  public readonly types = computed(() => this.dashboardStateSignal().types);
+  public readonly data = computed(() => this.dashboardStateSignal().data);
+  public readonly columns = computed(() => this.dashboardStateSignal().columns);
+  public readonly query = computed(() => this.dashboardStateSignal().query);
+  public readonly error = computed(() => this.dashboardStateSignal().error);
+
+  // Editable component ID as signal
+  private editableComponentIdSignal = signal<any>(null);
+  public readonly editableComponentId = this.editableComponentIdSignal.asReadonly();
+
+  // Keep observable for backward compatibility (can be removed later)
+  public dashboard$ = this.dashboardState;
+  public editableComponentId$ = this.editableComponentId;
 
   constructor(private http: HttpClient) { }
 
   getDashboard(): DashboardState {
-    return this.dashboardState.value;
+    return this.dashboardStateSignal();
   }
 
   setDashboardState(newState: Partial<DashboardState>): void {
-    this.dashboardState.next({ ...this.dashboardState.value, ...newState });
+    this.dashboardStateSignal.update(current => ({ ...current, ...newState }));
   }
 
   addComponent(component: SComponent): void {
-    const currentState = this.dashboardState.value;
-    this.dashboardState.next({
-      ...currentState,
-      components: [component, ...currentState.components]
-    });
+    // Ensure data and columns are always arrays
+    const componentWithDefaults = {
+      ...component,
+      data: component.data || [],
+      columns: component.columns || []
+    };
+    this.dashboardStateSignal.update(current => ({
+      ...current,
+      components: [componentWithDefaults, ...current.components]
+    }));
   }
 
   removeComponent(id: any): void {
-    const currentState = this.dashboardState.value;
-    this.dashboardState.next({
-      ...currentState,
-      components: currentState.components.filter(comp => comp.id !== id)
-    });
+    this.dashboardStateSignal.update(current => ({
+      ...current,
+      components: current.components.filter(comp => comp.id !== id)
+    }));
   }
 
   updateComponent(updatedComponent: SComponent): void {
-    const currentState = this.dashboardState.value;
-    this.dashboardState.next({
-      ...currentState,
-      components: currentState.components.map(comp =>
-        comp.id === updatedComponent.id ? updatedComponent : comp
+    // Ensure data and columns are always arrays
+    const componentWithDefaults = {
+      ...updatedComponent,
+      data: updatedComponent.data || [],
+      columns: updatedComponent.columns || []
+    };
+    this.dashboardStateSignal.update(current => ({
+      ...current,
+      components: current.components.map(comp =>
+        comp.id === componentWithDefaults.id ? componentWithDefaults : comp
       )
-    });
+    }));
   }
 
   toggleQueryEditable(componentId: any): void {
-    const currentState = this.dashboardState.value;
+    const currentState = this.dashboardStateSignal();
     const isCurrentlyEditable = currentState.components.find(c => c.id === componentId)?.isQueryEditable;
+
+    console.log('Toggle query editable for component:', componentId, 'Current state:', isCurrentlyEditable);
 
     const updatedComponents = currentState.components.map(comp => ({
       ...comp,
+      data: comp.data || [],
+      columns: comp.columns || [],
       isQueryEditable: comp.id === componentId ? !isCurrentlyEditable : false
     }));
 
-    this.dashboardState.next({
-      ...currentState,
+    this.dashboardStateSignal.update(current => ({
+      ...current,
       components: updatedComponents
-    });
+    }));
 
     const newEditableId = !isCurrentlyEditable ? componentId : null;
-    this.editableComponentId.next(newEditableId);
+    this.editableComponentIdSignal.set(newEditableId);
+
+    console.log('Updated components:', this.dashboardStateSignal().components.map(c => ({ id: c.id, isQueryEditable: c.isQueryEditable })));
   }
 
   getEditableComponentId(): any {
-    return this.editableComponentId.value;
+    return this.editableComponentIdSignal();
   }
 
   setTypesAndData(types: string[], data: any[], query: string, columns: string[], error: string | null = null): void {
-    const currentState = this.dashboardState.value;
-    this.dashboardState.next({
-      ...currentState,
+    this.dashboardStateSignal.update(current => ({
+      ...current,
       types,
       data,
       query,
       columns,
       error
-    });
+    }));
   }
 
   // API calls

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -20,45 +20,43 @@ interface ComponentType {
   standalone: true,
   imports: [CommonModule, FormsModule, TableComponentComponent, LineChartComponent, BarChartComponent, PieChartComponent],
   templateUrl: './dashboard-container.component.html',
-  styleUrls: ['./dashboard-container.component.css']
+  styleUrls: ['./dashboard-container.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardContainerComponent implements OnInit, OnDestroy {
-  components: SComponent[] = [];
-  showAddMenu = false;
-  componentTypes: ComponentType[] = [];
-  editingComponent: any = null;
-  editTitle = '';
-  isAdding = false;
-  editableComponentId: any = null;
-  private dashboardSubscription?: Subscription;
-  private editableComponentSubscription?: Subscription;
+  // Use signals for reactive state
+  components = computed(() => this.dashboardService.components());
+  showAddMenu = signal(false);
+  componentTypes = signal<ComponentType[]>([]);
+  editingComponent = signal<any>(null);
+  editTitle = signal('');
+  isAdding = computed(() => this.dashboardService.data().length > 0);
+  editableComponentId = computed(() => this.dashboardService.editableComponentId());
 
-  constructor(private dashboardService: DashboardService) { }
+  constructor(private dashboardService: DashboardService) {
+    // Use effect to react to dashboard state changes
+    effect(() => {
+      const types = this.dashboardService.types();
+      this.updateComponentTypes(types);
+    }, { allowSignalWrites: true });
+
+    // Track component changes for debugging
+    effect(() => {
+      const components = this.components();
+      console.log('Dashboard container - Components updated:', components.map(c => ({
+        id: c.id,
+        isQueryEditable: c.isQueryEditable
+      })));
+    });
+  }
 
   ngOnInit(): void {
-    // Subscribe to dashboard state changes
-    this.dashboardSubscription = this.dashboardService.dashboard$.subscribe(dashboard => {
-      this.components = dashboard.components;
-      this.updateComponentTypes(dashboard.types);
-      this.isAdding = dashboard.data.length > 0;
-    });
-
-    // Subscribe to editable component changes
-    this.editableComponentSubscription = this.dashboardService.editableComponentId$.subscribe(id => {
-      this.editableComponentId = id;
-    });
-
     // Load existing dashboard data
     this.loadDashboardData();
   }
 
   ngOnDestroy(): void {
-    if (this.dashboardSubscription) {
-      this.dashboardSubscription.unsubscribe();
-    }
-    if (this.editableComponentSubscription) {
-      this.editableComponentSubscription.unsubscribe();
-    }
+    // Cleanup if needed (effects are automatically cleaned up)
   }
 
   private loadDashboardData(): void {
@@ -69,7 +67,13 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
         if (response.data && response.data.length > 0) {
           const types = new Set<string>(response.data.map((component: any) => component.type));
           const processedData = response.data.map((component: any) => {
-            component.columns = component.columns.split(',').map((col: string) => col.trim());
+            // Ensure columns is an array
+            if (typeof component.columns === 'string') {
+              component.columns = component.columns.split(',').map((col: string) => col.trim());
+            }
+            // Ensure data and columns are always arrays
+            component.data = component.data || [];
+            component.columns = component.columns || [];
             return component;
           });
           this.dashboardService.setDashboardState({
@@ -85,7 +89,7 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   }
 
   private updateComponentTypes(types: string[]): void {
-    this.componentTypes = types.reduce((acc: ComponentType[], type) => {
+    const newTypes = types.reduce((acc: ComponentType[], type) => {
       switch (type) {
         case 'line':
           acc.push({ type: 'line', name: 'Line Chart', defaultTitle: 'Line Chart' });
@@ -105,18 +109,19 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
       }
       return acc;
     }, []);
+    this.componentTypes.set(newTypes);
   }
 
   toggleAddMenu(): void {
-    this.showAddMenu = !this.showAddMenu;
+    this.showAddMenu.update(value => !value);
   }
 
   closeAddMenu(): void {
-    this.showAddMenu = false;
+    this.showAddMenu.set(false);
   }
 
   addComponent(type: string): void {
-    const componentType = this.componentTypes.find(ct => ct.type === type);
+    const componentType = this.componentTypes().find(ct => ct.type === type);
     const dashboard = this.dashboardService.getDashboard();
 
     if (componentType && dashboard.columns.length > 0) {
@@ -158,7 +163,7 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
 
   removeComponent(id: any): void {
     console.log('Removing component with ID:', id);
-    const component = this.components.find(comp => comp.id === id);
+    const component = this.components().find(comp => comp.id === id);
 
     this.dashboardService.removeComponent(id);
 
@@ -176,19 +181,19 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   }
 
   startEditing(id: any, currentTitle: string): void {
-    this.editingComponent = id;
-    this.editTitle = currentTitle;
+    this.editingComponent.set(id);
+    this.editTitle.set(currentTitle);
   }
 
   saveEdit(): void {
-    const component = this.components.find(comp => comp.id === this.editingComponent);
+    const component = this.components().find(comp => comp.id === this.editingComponent());
     if (component) {
-      const updatedComponent = { ...component, title: this.editTitle };
+      const updatedComponent = { ...component, title: this.editTitle() };
       this.dashboardService.updateComponent(updatedComponent);
 
       // Update on server
       if (component.user_id) {
-        this.dashboardService.updateDashboardComponent(component.id, { title: this.editTitle }).subscribe({
+        this.dashboardService.updateDashboardComponent(component.id, { title: this.editTitle() }).subscribe({
           next: (response) => {
             console.log('Component title updated:', response);
           },
@@ -202,12 +207,12 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   }
 
   cancelEdit(): void {
-    this.editingComponent = null;
-    this.editTitle = '';
+    this.editingComponent.set(null);
+    this.editTitle.set('');
   }
 
   handleColumnsChange(id: any, newColumns: string[]): void {
-    const component = this.components.find(comp => comp.id === id);
+    const component = this.components().find(comp => comp.id === id);
     if (component) {
       const updatedComponent = { ...component, columns: newColumns };
       this.dashboardService.updateComponent(updatedComponent);
