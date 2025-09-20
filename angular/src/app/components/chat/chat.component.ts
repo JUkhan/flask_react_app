@@ -130,7 +130,6 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.inputValue = value;
     this.searchTerms.next(value);
   }
-
   private loadChatHistory(): void {
     console.log('Loading chat history...');
     const userId = sessionStorage.getItem('userId') || '123';

@@ -79,6 +79,7 @@
         </button>
         <button
           *ngIf="hasEditableComponent"
+          (click)="disableQueryEditMode()"
           class="hover:rounded-lg hover:bg-red-600 p-1 transition-colors"
           title="Query edit mode is active"
         >
