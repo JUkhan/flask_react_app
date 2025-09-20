@@ -6,7 +6,11 @@
     >
       <button
         (click)="handleToggleQueryEditable()"
-        [class]="isQueryEditable ? 'text-yellow-500 hover:text-yellow-700' : 'text-gray-400 hover:text-gray-600'"
+        [class]="
+          isQueryEditable
+            ? 'text-red-500 hover:text-red-700'
+            : 'text-gray-400 hover:text-gray-600'
+        "
         class="transition-colors"
         title="Toggle query editing"
       >
