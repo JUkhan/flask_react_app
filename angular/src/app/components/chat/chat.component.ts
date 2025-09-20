@@ -89,6 +89,18 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       console.log('Dashboard state updated:::::', state, this.messages);
       this.dashboardState.set(state);
       this.query = state.query;
+      if (state.types.length > 0 && state.types.includes('error')) {
+        const botResponse: Message = {
+          id: this.messages.length + 1,
+          text: state.error!,
+          sender: 'bot',
+          hasSql: false,
+          timestamp: new Date()
+        };
+
+        this.messages.push(botResponse);
+      }
+
     });
 
     // Subscribe to editable component changes
@@ -258,6 +270,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       },
       error: (error) => {
         console.error('Error sending message:', error);
+        error.error.bot = true;
         this.dashboardService.takeDecision(error.error);
         this.isTyping = false;
         this.selectedHelpDesk = null;
@@ -280,6 +293,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       error: (error) => {
         this.isLoading = false;
         error.error.query = sql;
+        error.error.bot = false;
         this.dashboardService.takeDecision(error.error);
         console.error('Error executing SQL:', error);
         this.selectedHelpDesk = null; // Clear selected help desk on error

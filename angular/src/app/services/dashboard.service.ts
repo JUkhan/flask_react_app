@@ -137,17 +137,22 @@ export class DashboardService {
     return this.http.post(`${this.baseUrl}/get-query-result2`, { query });
   }
 
-  takeDecision(response: { data: any[], query: string, error: string | null }): void {
-    const { data, query, error } = response;
+  takeDecision(response: { data: any[], query: string, error: string | null, detail: string, bot: boolean }): void {
+    const { data, query, error, detail, bot } = response;
 
     // Handle empty data
     if (!data || data.length === 0 || error) {
 
-      let errorMessage = error;
+      let errorMessage = error + ' ' + detail.replace(/\(.+?\)/g, '');
       if (!error) {
         errorMessage = 'No data found for the provided query. Please check your query and try again.';
       }
-      this.setTypesAndData([], [], query, [], errorMessage);
+      if (bot) {
+        this.setTypesAndData(['error'], [], errorMessage, [], errorMessage);
+      } else {
+        this.setTypesAndData([], [], query, [], errorMessage);
+      }
+
       return;
     }
 
