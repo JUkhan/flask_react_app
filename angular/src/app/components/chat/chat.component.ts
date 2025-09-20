@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -34,6 +34,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   hasEditableComponent = false;
   editableComponentId: any = null;
   hasVirginEditableComponent = false;
+  private isComponentUpdated = false;
   private transcriptSubscription: Subscription;
   private errorSubscription: Subscription;
   private editableComponentSubscription?: Subscription;
@@ -99,6 +100,15 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         };
 
         this.messages.push(botResponse);
+      }
+
+      if (!state.error && this.hasEditableComponent) {
+        const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId);
+        if (component && !this.isComponentUpdated && this.components().some(com => com.type === component.type)) {
+          this.isComponentUpdated = true;
+          this.addComponent(component.type);
+
+        }
       }
 
     });
@@ -223,13 +233,14 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.isTyping = true;
     this.preventScroll = false;
     this.helpDeskResults = [];
-    if (this.editableComponentId && this.hasVirginEditableComponent) {
-      const sql = this.findSqlByEditableComponentId(this.editableComponentId);
-      if (sql) {
-        userInput = `Based on the following SQL query: ${sql}, please regenerate the query adding following statement: ${userInput}`;
+    if (this.editableComponentId) {
+      const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId)!;
+      if (component?.query && this.hasVirginEditableComponent) {
+        userInput = `Based on the following SQL query: ${component.query}, please regenerate the query adding following statement: ${userInput}`;
+        this.hasVirginEditableComponent = false;
       }
-      console.log('Using SQL from editable component:', sql, userInput);
-      this.hasVirginEditableComponent = false;
+      console.log('Using SQL from editable component:', component?.query, userInput);
+      this.isComponentUpdated = false;
     }
     // Send message to backend
     const threadId = sessionStorage.getItem('userId') || '123';
@@ -280,6 +291,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   loadSqlData(sql: string): void {
     if (!sql) return;
     this.isLoading = true;
+    this.isComponentUpdated = false;
     this.preventScroll = this.selectedHelpDesk === null ? true : false;
     this.chatService.executeQuery(sql).subscribe({
       next: (data) => {
