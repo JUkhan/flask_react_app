@@ -350,7 +350,8 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         data: dashboard.data,
         columns: dashboard.columns,
         isQueryEditable: false,
-        user_id: sessionStorage.getItem('userId') || ''
+        user_id: sessionStorage.getItem('userId') || '',
+        json_config: null
       };
 
       console.log('Adding new component:', newComponent);
@@ -358,11 +359,29 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         const oldComponent = this.findSqlByEditableComponentId(this.editableComponentId);
         if (oldComponent) {
           newComponent.id = this.editableComponentId;
-          newComponent.isQueryEditable = true;;
+          newComponent.isQueryEditable = true;
+
+          // Preserve existing json_config from the old component
+          const existingComponent = this.dashboardState().components.find(c => c.id === this.editableComponentId);
+          if (existingComponent?.json_config) {
+            newComponent.json_config = existingComponent.json_config;
+          }
+
           this.dashboardService.updateComponent(newComponent);
           const serverComponent = { ...newComponent };
           (serverComponent as any).columns = (serverComponent.columns || []).join(',');
           delete (serverComponent as any).data;
+
+          // Update json_config with lastModified timestamp
+          if (serverComponent.json_config) {
+            const config = typeof serverComponent.json_config === 'string'
+              ? JSON.parse(serverComponent.json_config)
+              : serverComponent.json_config;
+            config.lastModified = new Date().toISOString();
+            config.updatedFrom = 'chat';
+            (serverComponent as any).json_config = JSON.stringify(config);
+          }
+
           this.dashboardService.updateDashboardComponent(serverComponent.id, serverComponent).subscribe({
             next: (response) => {
               console.log('Component updated on server:', response);
@@ -379,13 +398,36 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         (serverComponent as any).columns = (serverComponent.columns || []).join(',');
         delete (serverComponent as any).data;
 
+        // Calculate default grid position for new component
+        const currentComponents = this.dashboardService.components();
+        const index = currentComponents.length;
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+
+        // Prepare json_config with grid layout and metadata
+        (serverComponent as any).json_config = JSON.stringify({
+          grid: {
+            x: col * 6,
+            y: row * 4,
+            w: 6,
+            h: 4
+          },
+          createdAt: new Date().toISOString(),
+          version: '1.0',
+          source: 'chat'
+        });
+
         this.dashboardService.createDashboardComponent(serverComponent).subscribe({
           next: (response) => {
             console.log('Component saved to server:', response);
-            // Update the component with server-generated ID
-            const updatedComponent = { ...newComponent, id: response.dashboard.id };
-            this.dashboardService.removeComponent(newComponent.id);
-            this.dashboardService.addComponent(updatedComponent);
+            // Update the component with server-generated ID and json_config
+            const updatedComponent = {
+              ...newComponent,
+              id: response.dashboard.id,
+              json_config: JSON.parse((serverComponent as any).json_config)
+            };
+            //this.dashboardService.removeComponent(newComponent.id);
+            this.dashboardService.updateComponent(updatedComponent);
           },
           error: (error) => {
             console.error('Error saving component:', error);
