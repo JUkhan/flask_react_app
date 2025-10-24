@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal, computed, effect, ChangeDetection
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { KtdGridModule, KtdGridLayout, KtdGridLayoutItem, ktdTrackById } from '@katoid/angular-grid-layout';
 import { TableComponentComponent } from '../table-component/table-component.component';
 import { LineChartComponent } from '../chart-components/line-chart/line-chart.component';
 import { BarChartComponent } from '../chart-components/bar-chart/bar-chart.component';
@@ -18,7 +19,7 @@ interface ComponentType {
 @Component({
   selector: 'app-dashboard-container',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableComponentComponent, LineChartComponent, BarChartComponent, PieChartComponent],
+  imports: [CommonModule, FormsModule, KtdGridModule, TableComponentComponent, LineChartComponent, BarChartComponent, PieChartComponent],
   templateUrl: './dashboard-container.component.html',
   styleUrls: ['./dashboard-container.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -33,6 +34,28 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   isAdding = computed(() => this.dashboardService.data().length > 0);
   editableComponentId = computed(() => this.dashboardService.editableComponentId());
 
+  // Grid layout configuration
+  cols = signal(12);
+  rowHeight = signal(100);
+  gap = signal(16);
+  gridLayout = signal<KtdGridLayout>([]);
+
+  // Track by function for grid items
+  trackById = ktdTrackById;
+
+  // Computed signal to map grid layout items to components
+  gridComponents = computed(() => {
+    const layout = this.gridLayout();
+    const components = this.components();
+    return layout
+      .map(item => {
+        const component = components.find(c => String(c.id) === item.id);
+        if (!component) return null;
+        return { layout: item, component };
+      })
+      .filter((item): item is { layout: KtdGridLayoutItem; component: SComponent } => item !== null);
+  });
+
   constructor(private dashboardService: DashboardService) {
     // Use effect to react to dashboard state changes
     effect(() => {
@@ -40,19 +63,84 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
       this.updateComponentTypes(types);
     }, { allowSignalWrites: true });
 
-    // Track component changes for debugging
+    // Track component changes and sync grid layout only when components are added/removed
     effect(() => {
       const components = this.components();
-      console.log('Dashboard container - Components updated:', components.map(c => ({
-        id: c.id,
-        isQueryEditable: c.isQueryEditable
-      })));
-    });
+      const currentLayout = this.gridLayout();
+
+      console.log('Dashboard container - Components updated:', components.length, 'Layout items:', currentLayout.length);
+
+      // Only update grid layout if component count changed or layout is empty
+      if (components.length !== currentLayout.length) {
+        console.log('Component count changed, updating grid layout');
+        this.updateGridLayout(components);
+      }
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {
     // Load existing dashboard data
     this.loadDashboardData();
+  }
+
+  /**
+   * Migration utility: Migrate grid layout from old columns to json_config
+   * Call this method to migrate existing dashboard components
+   */
+  migrateGridLayoutToJsonConfig(): void {
+    const components = this.components();
+    let migratedCount = 0;
+    let skippedCount = 0;
+
+    console.log('🔄 Starting grid layout migration...');
+
+    components.forEach(component => {
+      // Skip if already has grid in json_config
+      if (component.json_config?.grid) {
+        console.log(`⏭️  Skipping component ${component.id} - already has grid in json_config`);
+        skippedCount++;
+        return;
+      }
+
+      // Check if has old grid columns
+      if ((component as any).grid_x !== undefined && (component as any).grid_y !== undefined) {
+        const existingConfig = component.json_config || {};
+
+        const updatedConfig = {
+          ...existingConfig,
+          grid: {
+            x: (component as any).grid_x,
+            y: (component as any).grid_y,
+            w: (component as any).grid_w || 6,
+            h: (component as any).grid_h || 4
+          },
+          migratedAt: new Date().toISOString(),
+          version: '1.0'
+        };
+
+        this.dashboardService.updateDashboardComponent(component.id, {
+          json_config: JSON.stringify(updatedConfig)
+        }).subscribe({
+          next: () => {
+            console.log(`✅ Migrated component ${component.id}`);
+            migratedCount++;
+
+            // Update local component
+            component.json_config = updatedConfig;
+          },
+          error: (error) => {
+            console.error(`❌ Failed to migrate component ${component.id}:`, error);
+          }
+        });
+      } else {
+        console.log(`⏭️  Skipping component ${component.id} - no old grid data`);
+        skippedCount++;
+      }
+    });
+
+    setTimeout(() => {
+      console.log(`✅ Migration completed: ${migratedCount} migrated, ${skippedCount} skipped`);
+    }, 1000);
   }
 
   ngOnDestroy(): void {
@@ -61,12 +149,19 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
 
   private loadDashboardData(): void {
     const userId = sessionStorage.getItem('userId') || '123';
+    console.log('Loading dashboard data for user:', userId);
+    console.log('Fetching from:', `/api/dashboards/${userId}`);
+
     this.dashboardService.fetchDashboardData(userId).subscribe({
       next: (response) => {
-        console.log('Fetched dashboard data:', response);
+        console.log('✅ Successfully fetched dashboard data:', response);
         if (response.data && response.data.length > 0) {
           const types = new Set<string>(response.data.map((component: any) => component.type));
-          const processedData = response.data.map((component: any) => {
+
+          // Build grid layout from saved positions
+          const savedLayout: KtdGridLayout = [];
+
+          const processedData = response.data.map((component: any, index: number) => {
             // Ensure columns is an array
             if (typeof component.columns === 'string') {
               component.columns = component.columns.split(',').map((col: string) => col.trim());
@@ -74,16 +169,73 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
             // Ensure data and columns are always arrays
             component.data = component.data || [];
             component.columns = component.columns || [];
+
+            // Parse json_config if it exists
+            if (component.json_config) {
+              try {
+                if (typeof component.json_config === 'string') {
+                  component.json_config = JSON.parse(component.json_config);
+                }
+              } catch (error) {
+                console.warn('Failed to parse json_config for component', component.id, error);
+                component.json_config = null;
+              }
+            }
+
+            // Extract grid layout - prioritize json_config, fallback to old columns
+            if (component.json_config?.grid) {
+              // Use grid layout from json_config
+              savedLayout.push({
+                id: String(component.id),
+                x: component.json_config.grid.x,
+                y: component.json_config.grid.y,
+                w: component.json_config.grid.w || 6,
+                h: component.json_config.grid.h || 4
+              });
+            } else if (component.grid_x !== undefined && component.grid_y !== undefined) {
+              // Fallback to old grid columns for backward compatibility
+              savedLayout.push({
+                id: String(component.id),
+                x: component.grid_x,
+                y: component.grid_y,
+                w: component.grid_w || 6,
+                h: component.grid_h || 4
+              });
+            }
+
             return component;
           });
+
+          console.log('Processed components:', processedData.length);
+          console.log('Saved layout positions:', savedLayout.length);
+
+          // Set initial grid layout if we have saved positions
+          if (savedLayout.length > 0) {
+            console.log('Setting grid layout with saved positions');
+            this.gridLayout.set(savedLayout);
+          }
+
+          console.log('Updating dashboard state...');
           this.dashboardService.setDashboardState({
             components: processedData,
             types: Array.from(types)
           });
+          console.log('✅ Dashboard state updated successfully');
+        } else {
+          console.log('No dashboard data found for user');
         }
       },
       error: (error) => {
-        console.error('Error fetching dashboard data:', error);
+        console.error('❌ Error fetching dashboard data:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url
+        });
+      },
+      complete: () => {
+        console.log('Dashboard data fetch completed');
       }
     });
   }
@@ -144,11 +296,33 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
         (serverComponent as any).columns = (serverComponent.columns || []).join(',');
         delete (serverComponent as any).data;
 
+        // Calculate default grid position for new component
+        const currentComponents = this.components();
+        const index = currentComponents.length;
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+
+        // Prepare json_config with grid layout and metadata
+        (serverComponent as any).json_config = JSON.stringify({
+          grid: {
+            x: col * 6,
+            y: row * 4,
+            w: 6,
+            h: 4
+          },
+          createdAt: new Date().toISOString(),
+          version: '1.0'
+        });
+
         this.dashboardService.createDashboardComponent(serverComponent).subscribe({
           next: (response) => {
             console.log('Component saved to server:', response);
-            // Update the component with server-generated ID
-            const updatedComponent = { ...newComponent, id: response.dashboard.id };
+            // Update the component with server-generated ID and json_config
+            const updatedComponent = {
+              ...newComponent,
+              id: response.dashboard.id,
+              json_config: JSON.parse((serverComponent as any).json_config)
+            };
             this.dashboardService.removeComponent(newComponent.id);
             this.dashboardService.addComponent(updatedComponent);
           },
@@ -233,5 +407,76 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
 
   toggleQueryEditable(componentId: any): void {
     this.dashboardService.toggleQueryEditable(componentId);
+  }
+
+  // Grid layout methods
+  private updateGridLayout(components: SComponent[]): void {
+    const currentLayout = this.gridLayout();
+    const newLayout: KtdGridLayout = components.map((component, index) => {
+      // Check if component already has layout info
+      const existingLayout = currentLayout.find(item => item.id === String(component.id));
+
+      if (existingLayout) {
+        return existingLayout;
+      }
+
+      // Create default layout for new components
+      // Place items in a 2-column grid
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+
+      return {
+        id: String(component.id),
+        x: col * 6, // 12 columns / 2 = 6 columns per item
+        y: row * 4, // 4 rows per item
+        w: 6,       // half width
+        h: 4,       // 4 rows height
+      };
+    });
+
+    this.gridLayout.set(newLayout);
+  }
+
+  onLayoutUpdated(layout: KtdGridLayout): void {
+    console.log('Layout updated:', layout);
+    this.gridLayout.set(layout);
+
+    // Save layout to backend for persistence
+    this.saveGridLayout(layout);
+  }
+
+  private saveGridLayout(layout: KtdGridLayout): void {
+    const userId = sessionStorage.getItem('userId');
+    if (!userId) return;
+
+    // Save each component's layout position in json_config
+    layout.forEach(item => {
+      const component = this.components().find(c => String(c.id) === item.id);
+      if (component && component.user_id) {
+        // Get existing json_config or create new one
+        const existingConfig = component.json_config || {};
+
+        // Update grid layout in json_config
+        const updatedConfig = {
+          ...existingConfig,
+          grid: {
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+          },
+          lastModified: new Date().toISOString()
+        };
+
+        const updateData = {
+          json_config: JSON.stringify(updatedConfig)
+        };
+
+        this.dashboardService.updateDashboardComponent(component.id, updateData).subscribe({
+          next: () => console.log(`Layout saved for component ${component.id}`),
+          error: (error) => console.error('Error saving layout:', error)
+        });
+      }
+    });
   }
 }

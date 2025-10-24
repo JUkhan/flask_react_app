@@ -38,7 +38,7 @@ class Dashboard(db.Model):
     columns = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.String(80), nullable=False)
-
+    json_config = db.Column(db.Text, nullable=True)
     def to_dict(self):
         return {
             'id': self.id,
@@ -47,7 +47,8 @@ class Dashboard(db.Model):
             'query':self.query,
             'columns':self.columns,
             'created_at': self.created_at.isoformat(),
-            'user_id': self.user_id
+            'user_id': self.user_id,
+            'json_config': self.json_config
         }
 
 class HelpDesk(db.Model):

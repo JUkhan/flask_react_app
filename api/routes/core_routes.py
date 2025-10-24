@@ -22,24 +22,25 @@ def login():
 def create_dashboard():
     try:
         data = request.get_json()
-       
+
         # Create new user
         new_dashboard = Dashboard(
             title= data['title'],
             type= data['type'],
             query=data['query'],
             columns=data['columns'],
-            user_id=data['user_id']
+            user_id=data['user_id'],
+            json_config=data.get('json_config', None)
         )
-        
+
         db.session.add(new_dashboard)
         db.session.commit()
-        
+
         return jsonify({
             'message': 'Dashboard created successfully',
             'dashboard': new_dashboard.to_dict()
         }), 201
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -79,7 +80,7 @@ def update_dashboard(dashboard_id):
         data = request.get_json()
         
         # Update fields if provided
-        
+
         if 'title' in data:
             dashboard.title=data['title']
         if 'columns' in data:
@@ -90,6 +91,16 @@ def update_dashboard(dashboard_id):
             dashboard.type = data['type']
         if 'user_id' in data:
             dashboard.user_id = data['user_id']
+        if 'grid_x' in data:
+            dashboard.grid_x = data['grid_x']
+        if 'grid_y' in data:
+            dashboard.grid_y = data['grid_y']
+        if 'grid_w' in data:
+            dashboard.grid_w = data['grid_w']
+        if 'grid_h' in data:
+            dashboard.grid_h = data['grid_h']
+        if 'json_config' in data:
+            dashboard.json_config = data['json_config']
         
         db.session.commit()
         
@@ -190,13 +201,83 @@ def delete_helpdesk_entry(title):
         entry = HelpDesk.query.get(title)
         if not entry:
             return jsonify({'error': 'HelpDesk entry not found'}), 404
-        
+
         db.session.delete(entry)
         db.session.commit()
-        
+
         return jsonify({'message': 'HelpDesk entry deleted successfully'}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-        
-    
+
+
+# Migration endpoint - Migrate grid layout to json_config
+@app.route('/api/dashboards/migrate', methods=['POST'])
+def migrate_dashboards_to_json_config():
+    """
+    Migrate all dashboard components from grid_x/grid_y/grid_w/grid_h columns to json_config
+    """
+    try:
+        import json
+
+        # Get all dashboards
+        dashboards = Dashboard.query.all()
+        migrated_count = 0
+        skipped_count = 0
+        error_count = 0
+
+        for dashboard in dashboards:
+            try:
+                # Parse existing json_config
+                existing_config = {}
+                if dashboard.json_config:
+                    try:
+                        if isinstance(dashboard.json_config, str):
+                            existing_config = json.loads(dashboard.json_config)
+                        else:
+                            existing_config = dashboard.json_config
+                    except:
+                        existing_config = {}
+
+                # Skip if already has grid in json_config
+                if 'grid' in existing_config:
+                    skipped_count += 1
+                    continue
+
+                # Check if has old grid columns
+                if hasattr(dashboard, 'grid_x') and dashboard.grid_x is not None:
+                    # Migrate to json_config
+                    existing_config['grid'] = {
+                        'x': dashboard.grid_x,
+                        'y': dashboard.grid_y,
+                        'w': dashboard.grid_w if dashboard.grid_w is not None else 6,
+                        'h': dashboard.grid_h if dashboard.grid_h is not None else 4
+                    }
+                    existing_config['migratedAt'] = str(dashboard.created_at) if hasattr(dashboard, 'created_at') else None
+                    existing_config['version'] = '1.0'
+
+                    dashboard.json_config = json.dumps(existing_config)
+                    migrated_count += 1
+                else:
+                    skipped_count += 1
+
+            except Exception as e:
+                print(f"Error migrating dashboard {dashboard.id}: {str(e)}")
+                error_count += 1
+                continue
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Migration completed',
+            'migrated': migrated_count,
+            'skipped': skipped_count,
+            'errors': error_count,
+            'total': len(dashboards)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+

@@ -2,31 +2,32 @@
 
 
 Table: customers
-Description: Represents customers data in the system
+Description: Represents customers data in the system.
         customer_id (INTEGER, Primary Key)
-        name (VARCHAR) - awesome name!!
-        email (VARCHAR) - email
-        registration_date (DATE) - sd ds ds dsd
+        name (VARCHAR)
+        email (VARCHAR)
+        registration_date (DATE)
         last_login (DATETIME)
 
 Table: dashboard_gen_core
-Description: Represents dashboard data in the system.
+Description: Represents dashboard gen core data in the system.
         id (INTEGER, Primary Key)
         title (VARCHAR(200), Not Null)
         type (TEXT, Not Null)
         query (TEXT, Not Null)
         columns (TEXT, Not Null)
         created_at (DATETIME)
-        user_id (INTEGER, Not Null, Foreign Key -> user.id)
+        user_id (VARCHAR(80), Not Null)
+        json_config (TEXT)
 
 Table: helpdesk_gen_core
-Description: Represents helpdesk data in the system.
+Description: Represents helpdesk gen core data in the system.
         title (TEXT, Primary Key)
         query_description (TEXT, Not Null)
         query (TEXT)
 
 Table: order_items
-Description: Represents order items data in the system
+Description: Represents order items data in the system.
         item_id (INTEGER, Primary Key)
         order_id (INTEGER, Foreign Key -> orders.order_id)
         product_id (INTEGER, Foreign Key -> products.product_id)
@@ -51,7 +52,7 @@ Description: Represents products data in the system.
         stock_quantity (INTEGER)
 
 Table: user_gen_core
-Description: Represents user data in the system.
+Description: Represents user gen core data in the system.
         id (INTEGER, Primary Key)
         username (VARCHAR(80), Not Null, Unique)
         email (VARCHAR(120), Not Null, Unique)

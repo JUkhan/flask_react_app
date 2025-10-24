@@ -11,6 +11,7 @@ export interface SComponent {
   columns: string[];
   user_id?: any;
   isQueryEditable?: boolean;
+  json_config?: any;
 }
 
 export interface DashboardState {
