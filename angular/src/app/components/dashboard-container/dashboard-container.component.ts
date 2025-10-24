@@ -511,6 +511,31 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
     }
   }
 
+  handleConfigChange(id: any, newConfig: any): void {
+    const component = this.components().find(comp => comp.id === id);
+    if (component) {
+      const updatedComponent = {
+        ...component,
+        json_config: newConfig
+      };
+      this.dashboardService.updateComponent(updatedComponent);
+
+      // Update on server
+      if (component.user_id) {
+        this.dashboardService.updateDashboardComponent(id, {
+          json_config: JSON.stringify(newConfig)
+        }).subscribe({
+          next: (response) => {
+            console.log('Component config updated:', response);
+          },
+          error: (error) => {
+            console.error('Error updating component config:', error);
+          }
+        });
+      }
+    }
+  }
+
   toggleQueryEditable(componentId: any): void {
     this.dashboardService.toggleQueryEditable(componentId);
   }

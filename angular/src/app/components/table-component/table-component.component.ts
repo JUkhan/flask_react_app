@@ -1,4 +1,4 @@
-import { Component, input, output, model, OnInit, ChangeDetectionStrategy, effect, signal, computed } from '@angular/core';
+import { Component, input, output, model, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, effect, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardService } from '../../services/dashboard.service';
@@ -30,14 +30,15 @@ export class TableComponentComponent implements OnInit {
   readonly onEdit = output<{ id: any, title: string }>();
   readonly onColumnsChange = output<string[]>();
   readonly onToggleQueryEditable = output<void>();
+  readonly onConfigChange = output<any>();
 
   // Internal state as signals
   displayColumns = signal<string[]>([]);
   page = signal('');
   // Pagination properties as signals
   currentPage = signal(1);
-  pageSize = signal(3);
-  pageSizeOptions = [3, 10, 25, 50];
+  pageSize = signal(5);
+  pageSizeOptions = [5, 10, 25, 50, 100];
   totalPages = signal(0);
   // Drag and drop properties
   draggedColumnIndex = signal<number | null>(null);
@@ -51,7 +52,10 @@ export class TableComponentComponent implements OnInit {
   });
 
 
-  constructor(private dashboardService: DashboardService) {
+  constructor(
+    private dashboardService: DashboardService,
+    private cdr: ChangeDetectorRef
+  ) {
     // React to input changes
     effect(() => {
       const data = this.data();
@@ -131,10 +135,25 @@ export class TableComponentComponent implements OnInit {
     this.goToPage(this.currentPage() + 1);
   }
 
-  onPageSizeChange(): void {
+  onPageSizeChange(newSize: number): void {
+    console.log('Page size changing to:', newSize);
+    this.pageSize.set(newSize);
     this.currentPage.set(1);
-    this.pageSize.update(size => +size);
     this.updatePagination();
+
+    // Update json_config and emit to parent for persistence
+    const currentConfig = this.json_config() || {};
+    const updatedConfig = {
+      ...currentConfig,
+      table: {
+        ...(currentConfig.table || {}),
+        pageSize: newSize
+      }
+    };
+    this.onConfigChange.emit(updatedConfig);
+
+    this.cdr.markForCheck();
+    console.log('New pageSize:', this.pageSize(), 'paginatedData length:', this.paginatedData().length);
   }
 
   min(a: number, b: number): number {
