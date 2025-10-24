@@ -1,15 +1,15 @@
-<div [class]="'fixed top-4 right-4 ' + (isOpen ? 'z-50' : '')">
+<div [class]="'fixed top-4 right-4 ' + (isOpen() ? 'z-50' : '')">
   <!-- Chat Toggle Button -->
   <button
     (click)="toggleChat()"
     [class]="
       'mb-4 -mt-2 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 ' +
-      (isOpen
+      (isOpen()
         ? 'bg-red-500 hover:bg-red-600 text-white'
         : 'bg-blue-500 hover:bg-blue-600 text-white')
     "
   >
-    <ng-container *ngIf="isOpen; else chatIcon">
+    <ng-container *ngIf="isOpen(); else chatIcon">
       <svg
         class="w-6 h-6"
         fill="none"
@@ -45,7 +45,7 @@
   <div
     [class]="
       'bg-white rounded-lg shadow-2xl border transition-all duration-300 transform ' +
-      (isOpen
+      (isOpen()
         ? 'opacity-100 scale-100 translate-y-0'
         : 'opacity-0 scale-95 translate-y-4 pointer-events-none')
     "
@@ -78,7 +78,7 @@
           </svg>
         </button>
         <button
-          *ngIf="hasEditableComponent"
+          *ngIf="hasEditableComponent()"
           (click)="disableQueryEditMode()"
           class="hover:rounded-lg hover:bg-red-600 p-1 transition-colors"
           title="Query edit mode is active"
@@ -146,7 +146,7 @@
           "
         >
           <button
-            *ngIf="message.hasSql && message.text !== query"
+            *ngIf="message.hasSql && message.text !== query()"
             [disabled]="isLoading()"
             (click)="loadSqlData(message.text)"
             title="Click to load data"
@@ -190,7 +190,7 @@
           <div class="text-sm">
             <ng-container
               *ngIf="
-                message.hasSql && message.text === query;
+                message.hasSql && message.text === query();
                 else showMessageText
               "
             >
@@ -231,7 +231,7 @@
       </div>
 
       <!-- Typing Indicator -->
-      <div *ngIf="isTyping" class="flex justify-start">
+      <div *ngIf="isTyping()" class="flex justify-start">
         <div
           class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg rounded-bl-none"
         >
@@ -254,12 +254,12 @@
     <div class="relative border-t p-4">
       <!-- Help Desk Suggestions -->
       <div
-        *ngIf="helpDeskResults.length > 0"
+        *ngIf="helpDeskResults().length > 0"
         class="absolute bottom-full left-0 right-0 bg-white border border-gray-300 rounded-t-lg shadow-lg z-10 max-h-48 overflow-y-auto"
       >
         <ul>
           <li
-            *ngFor="let result of helpDeskResults"
+            *ngFor="let result of helpDeskResults()"
             (click)="helpDeskAction(result)"
             class="p-2 cursor-pointer hover:bg-gray-100"
           >
@@ -291,7 +291,7 @@
         </button>
         <input
           type="text"
-          [ngModel]="inputValue"
+          [ngModel]="inputValue()"
           (ngModelChange)="onInputChange($event)"
           (keypress)="handleKeyPress($event)"
           placeholder="Type your message..."
@@ -299,7 +299,7 @@
         />
         <button
           (click)="handleSendMessage()"
-          [disabled]="inputValue.trim() === ''"
+          [disabled]="inputValue().trim() === ''"
           class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           <svg

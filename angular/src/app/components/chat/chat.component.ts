@@ -24,15 +24,15 @@ import { PieChartComponent } from '../chart-components/pie-chart/pie-chart.compo
 export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
 
-  isOpen = false;
+  isOpen = signal(false);
   messages = signal<Message[]>([
     { id: 1, text: 'Hello! How can I help you today?', sender: 'bot', timestamp: new Date() },
   ]);
-  inputValue = '';
-  isTyping = false;
+  inputValue = signal('');
+  isTyping = signal(false);
   isLoading = signal(false);
   preventScroll = false;
-  hasEditableComponent = false;
+  hasEditableComponent = signal(false);
   editableComponentId: any = null;
   hasVirginEditableComponent = false;
   private isComponentUpdated = false;
@@ -60,8 +60,8 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   });
   error = computed(() => this.dashboardState().error);
 
-  query: string = '';
-  helpDeskResults: HelpDesk[] = [];
+  query = signal('');
+  helpDeskResults = signal<HelpDesk[]>([]);
   private searchTerms = new Subject<string>();
   private selectedHelpDesk: HelpDesk | null = null;
 
@@ -73,8 +73,8 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   ) {
     this.transcriptSubscription = this.speechRecognitionService.transcript$.subscribe(
       transcript => {
-        this.inputValue = transcript;
-        this.searchTerms.next(this.inputValue);
+        this.inputValue.set(transcript);
+        this.searchTerms.next(this.inputValue());
       }
     );
     this.errorSubscription = this.speechRecognitionService.error$.subscribe(
@@ -88,7 +88,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       const state = this.dashboardService.dashboardState();
       console.log('Dashboard state updated:::::', state);
       this.dashboardState.set(state);
-      this.query = state.query;
+      this.query.set(state.query);
 
       if (state.types.length > 0 && state.types.includes('error')) {
         const botResponse: Message = {
@@ -101,7 +101,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.messages.update(msgs => [...msgs, botResponse]);
       }
 
-      if (!state.error && this.hasEditableComponent) {
+      if (!state.error && this.hasEditableComponent()) {
         const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId);
         if (component && !this.isComponentUpdated && this.components().some(com => com.type === component.type)) {
           this.addComponent(component.type);
@@ -113,7 +113,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     // Use effect to react to editable component changes (must be in constructor)
     effect(() => {
       const id = this.dashboardService.editableComponentId();
-      this.hasEditableComponent = id !== null;
+      this.hasEditableComponent.set(id !== null);
       this.hasVirginEditableComponent = id !== null;
       this.editableComponentId = id;
       console.log('Editable component ID updated:', id);
@@ -127,7 +127,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       debounceTime(300),
       switchMap((term: string) => this.chatService.searchHelpDesk(term))
     ).subscribe(results => {
-      this.helpDeskResults = results;
+      this.helpDeskResults.set(results);
     });
   }
 
@@ -138,7 +138,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   onInputChange(value: string): void {
-    this.inputValue = value;
+    this.inputValue.set(value);
     this.searchTerms.next(value);
   }
   private loadChatHistory(): void {
@@ -172,15 +172,15 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   toggleChat(): void {
-    this.isOpen = !this.isOpen;
-    if (this.isOpen && this.router.url !== '/dashboard') {
+    this.isOpen.update(value => !value);
+    if (this.isOpen() && this.router.url !== '/dashboard') {
       console.log('Redirecting to dashboard');
       this.router.navigate(['/dashboard'], { replaceUrl: true });
     }
   }
 
   closeChat(): void {
-    this.isOpen = false;
+    this.isOpen.set(false);
   }
 
   helpDeskAction(helpDesk: HelpDesk): void {
@@ -188,14 +188,14 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.selectedHelpDesk = helpDesk;
     if (helpDesk.query) {
       const newMessage: Message = {
-        id: this.messages.length + 1,
+        id: this.messages().length + 1,
         text: helpDesk.title,
         sender: 'user',
         timestamp: new Date(),
       };
       this.messages.update(msgs => [...msgs, newMessage]);
       const botResponse: Message = {
-        id: this.messages.length + 1,
+        id: this.messages().length + 1,
         text: helpDesk.query,
         sender: 'bot',
         hasSql: true,
@@ -203,15 +203,15 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       };
       this.messages.update(msgs => [...msgs, botResponse]);
       this.loadSqlData(helpDesk.query);
-      this.inputValue = '';
+      this.inputValue.set('');
     } else {
-      this.inputValue = helpDesk.query_description;
+      this.inputValue.set(helpDesk.query_description);
       this.handleSendMessage();
     }
-    this.helpDeskResults = [];
+    this.helpDeskResults.set([]);
   }
   startNewConversation(): void {
-    this.inputValue = 'new conversation';
+    this.inputValue.set('new conversation');
     this.handleSendMessage();
   }
   findSqlByEditableComponentId(id: any): string | null {
@@ -219,21 +219,21 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     return component ? component.query : null;
   }
   handleSendMessage(): void {
-    if (this.inputValue.trim() === '') return;
+    if (this.inputValue().trim() === '') return;
 
     const newMessage: Message = {
-      id: this.messages.length + 1,
-      text: this.selectedHelpDesk ? this.selectedHelpDesk.title : this.inputValue,
+      id: this.messages().length + 1,
+      text: this.selectedHelpDesk ? this.selectedHelpDesk.title : this.inputValue(),
       sender: 'user',
       timestamp: new Date(),
     };
 
     this.messages.update(msgs => [...msgs, newMessage]);
-    let userInput = this.inputValue;
-    this.inputValue = '';
-    this.isTyping = true;
+    let userInput = this.inputValue();
+    this.inputValue.set('');
+    this.isTyping.set(true);
     this.preventScroll = false;
-    this.helpDeskResults = [];
+    this.helpDeskResults.set([]);
     if (this.editableComponentId) {
       const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId)!;
       if (component?.query && this.hasVirginEditableComponent) {
@@ -249,7 +249,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       next: (data) => {
         console.log('Bot response:', data);
         if (data.query === 'New conversation started') {
-          this.isTyping = false;
+          this.isTyping.set(false);
           this.messages.set([{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot', timestamp: new Date() }]);
           return;
         }
@@ -264,7 +264,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         };
 
         this.messages.update(msgs => [...msgs, botResponse]);
-        this.isTyping = false;
+        this.isTyping.set(false);
         if (data.query && this.selectedHelpDesk) {
           this.selectedHelpDesk.query = data.query;
           this.chatService.updateHelpDesk(this.selectedHelpDesk).subscribe({
@@ -283,7 +283,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         console.error('Error sending message:', error);
         error.error.bot = true;
         this.dashboardService.takeDecision(error.error);
-        this.isTyping = false;
+        this.isTyping.set(false);
         this.selectedHelpDesk = null;
       }
     });
@@ -354,7 +354,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       };
 
       console.log('Adding new component:', newComponent);
-      if (this.hasEditableComponent) {
+      if (this.hasEditableComponent()) {
         const oldComponent = this.findSqlByEditableComponentId(this.editableComponentId);
         if (oldComponent) {
           newComponent.id = this.editableComponentId;

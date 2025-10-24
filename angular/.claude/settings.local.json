@@ -4,7 +4,8 @@
       "Bash(npm run build:*)",
       "Bash(npx ng build:*)",
       "Bash(npm start)",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "Bash(npm install)"
     ],
     "deny": [],
     "ask": []
