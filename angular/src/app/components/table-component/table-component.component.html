@@ -141,6 +141,7 @@
               (dragstart)="onDragStart($event, i)"
               (dragover)="onDragOver($event)"
               (drop)="onDrop($event, i)"
+              (dragend)="onDragEnd($event)"
               [class.bg-blue-100]="draggedColumnIndex() === i"
               title="Drag to reorder columns"
             >

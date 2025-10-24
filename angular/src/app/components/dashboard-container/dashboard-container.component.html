@@ -51,9 +51,18 @@
       @for (gridItem of gridComponents(); track gridItem.layout.id) {
           <ktd-grid-item
             [id]="gridItem.layout.id"
-            class="relative overflow-hidden"
+            class="relative group/grid-item"
+            style="cursor: default !important;"
           >
-            @switch (gridItem.component.type) { @case ('line') {
+            <div class="relative h-full cursor-default">
+              <!-- Drag Handle - Small icon at top left corner, visible on hover -->
+              <div ktdGridDragHandle class="absolute top-2 left-2 p-2 bg-gray-200/90 hover:bg-gray-300 rounded cursor-move z-20 opacity-0 group-hover/grid-item:opacity-100 transition-opacity" title="Drag to move component">
+                <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
+                </svg>
+              </div>
+
+              @switch (gridItem.component.type) { @case ('line') {
         <!-- Line Chart -->
         <app-line-chart
           [id]="gridItem.component.id"
@@ -142,6 +151,7 @@
           </div>
         </div>
             } }
+            </div>
           </ktd-grid-item>
       }
     </ktd-grid>

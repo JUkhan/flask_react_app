@@ -161,6 +161,9 @@ export class TableComponentComponent implements OnInit {
 
   // Drag and drop methods
   onDragStart(event: DragEvent, columnIndex: number): void {
+    // Stop propagation to prevent grid-layout from intercepting
+    event.stopPropagation();
+
     this.draggedColumnIndex.set(columnIndex);
     this.isDragging.set(true);
     if (event.dataTransfer) {
@@ -170,6 +173,8 @@ export class TableComponentComponent implements OnInit {
   }
 
   onDragOver(event: DragEvent): void {
+    // Stop propagation to prevent grid-layout from intercepting
+    event.stopPropagation();
     event.preventDefault();
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move';
@@ -177,7 +182,10 @@ export class TableComponentComponent implements OnInit {
   }
 
   onDrop(event: DragEvent, targetColumnIndex: number): void {
+    // Stop propagation to prevent grid-layout from intercepting
+    event.stopPropagation();
     event.preventDefault();
+
     const draggedIndex = this.draggedColumnIndex();
 
     if (draggedIndex !== null && draggedIndex !== targetColumnIndex) {
@@ -199,7 +207,10 @@ export class TableComponentComponent implements OnInit {
     this.isDragging.set(false);
   }
 
-  onDragEnd(): void {
+  onDragEnd(event: DragEvent): void {
+    // Stop propagation to prevent grid-layout from intercepting
+    event.stopPropagation();
+
     this.draggedColumnIndex.set(null);
     this.isDragging.set(false);
   }
