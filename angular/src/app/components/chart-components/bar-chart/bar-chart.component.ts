@@ -23,6 +23,7 @@ export class BarChartComponent implements OnInit {
   readonly query = input<string>();
   readonly type = input<string>();
   readonly isQueryEditable = input<boolean>();
+  readonly json_config = input<any>();
 
   // Signal outputs
   readonly onRemove = output<any>();
@@ -47,6 +48,15 @@ export class BarChartComponent implements OnInit {
       const editable = this.isQueryEditable();
       console.log(`Bar chart ${this.id()} - isQueryEditable changed to:`, editable);
       this.cdr.markForCheck();
+    });
+
+    // React to config changes
+    effect(() => {
+      const config = this.json_config();
+      if (config?.chart) {
+        this.applyChartConfig(config.chart);
+        this.cdr.markForCheck();
+      }
     });
   }
   public barChartData: ChartConfiguration['data'] = {
@@ -129,5 +139,45 @@ export class BarChartComponent implements OnInit {
   handleToggleQueryEditable(): void {
     console.log('Bar chart - Toggle query editable clicked, current state:', this.isQueryEditable());
     this.onToggleQueryEditable.emit();
+  }
+
+  private applyChartConfig(config: any): void {
+    // Apply chart configuration options
+    this.barChartOptions = {
+      responsive: config.responsive !== false,
+      maintainAspectRatio: config.maintainAspectRatio !== false,
+      animation: config.animationEnabled !== false ? {
+        duration: config.animationDuration || 1000,
+        easing: config.animationEasing || 'easeOutQuad'
+      } : false,
+      scales: {
+        x: {
+          display: config.showXAxis !== false,
+          grid: {
+            display: config.showGrid !== false,
+            color: config.gridColor || 'rgba(0, 0, 0, 0.1)'
+          }
+        },
+        y: {
+          display: config.showYAxis !== false,
+          beginAtZero: config.beginAtZero !== false,
+          grid: {
+            display: config.showGrid !== false,
+            color: config.gridColor || 'rgba(0, 0, 0, 0.1)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: config.showLegend !== false,
+          position: config.legendPosition || 'top'
+        },
+        tooltip: {
+          enabled: config.showTooltip !== false
+        }
+      }
+    };
+
+    this.updateChartData();
   }
 }

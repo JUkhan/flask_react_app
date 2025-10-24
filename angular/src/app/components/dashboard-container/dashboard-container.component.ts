@@ -31,6 +31,7 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   componentTypes = signal<ComponentType[]>([]);
   editingComponent = signal<any>(null);
   editTitle = signal('');
+  editChartConfig = signal<any>(null);
   isAdding = computed(() => this.dashboardService.data().length > 0);
   editableComponentId = computed(() => this.dashboardService.editableComponentId());
 
@@ -357,22 +358,114 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   startEditing(id: any, currentTitle: string): void {
     this.editingComponent.set(id);
     this.editTitle.set(currentTitle);
+
+    // Load current configuration (chart or table)
+    const component = this.components().find(comp => comp.id === id);
+    if (component) {
+      if (component.type === 'table' && component.json_config?.table) {
+        this.editChartConfig.set({ ...component.json_config.table });
+      } else if (component.type !== 'table' && component.json_config?.chart) {
+        this.editChartConfig.set({ ...component.json_config.chart });
+      } else {
+        // Set default configuration based on component type
+        this.editChartConfig.set(this.getDefaultChartConfig(component.type));
+      }
+    }
+  }
+
+  private getDefaultChartConfig(type?: string): any {
+    const defaults: any = {
+      showLegend: true,
+      legendPosition: 'top',
+      responsive: true,
+      maintainAspectRatio: true,
+      animationEnabled: true,
+      animationDuration: 1000,
+      animationEasing: 'easeOutQuad',
+      colorScheme: 'default',
+      borderWidth: 2,
+      showTooltip: true,
+      showTitle: false,
+      titlePosition: 'top',
+      titleAlign: 'center'
+    };
+
+    if (type === 'line') {
+      return {
+        ...defaults,
+        showGrid: true,
+        showXAxis: true,
+        showYAxis: true,
+        beginAtZero: true,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 3,
+        pointStyle: 'circle'
+      };
+    } else if (type === 'bar') {
+      return {
+        ...defaults,
+        showGrid: true,
+        showXAxis: true,
+        showYAxis: true,
+        beginAtZero: true,
+        barThickness: 'flex',
+        maxBarThickness: 50
+      };
+    } else if (type === 'pie' || type === 'donut') {
+      return {
+        ...defaults,
+        cutout: type === 'donut' ? '50%' : '0%',
+        rotation: 0,
+        circumference: 360
+      };
+    } else if (type === 'table') {
+      return {
+        showPagination: true,
+        pageSize: 10,
+        stripedRows: true,
+        showBorders: true,
+        hoverEffect: true,
+        denseLayout: false,
+        headerStyle: 'default',
+        headerColor: '#3b82f6'
+      };
+    }
+
+    return defaults;
   }
 
   saveEdit(): void {
     const component = this.components().find(comp => comp.id === this.editingComponent());
     if (component) {
-      const updatedComponent = { ...component, title: this.editTitle() };
+      // Update component with new title and config (chart or table)
+      const updatedConfig = { ...component.json_config };
+
+      if (component.type === 'table') {
+        updatedConfig.table = this.editChartConfig();
+      } else {
+        updatedConfig.chart = this.editChartConfig();
+      }
+      updatedConfig.lastModified = new Date().toISOString();
+
+      const updatedComponent = {
+        ...component,
+        title: this.editTitle(),
+        json_config: updatedConfig
+      };
       this.dashboardService.updateComponent(updatedComponent);
 
       // Update on server
       if (component.user_id) {
-        this.dashboardService.updateDashboardComponent(component.id, { title: this.editTitle() }).subscribe({
+        this.dashboardService.updateDashboardComponent(component.id, {
+          title: this.editTitle(),
+          json_config: JSON.stringify(updatedComponent.json_config)
+        }).subscribe({
           next: (response) => {
-            console.log('Component title updated:', response);
+            console.log('Component updated:', response);
           },
           error: (error) => {
-            console.error('Error updating component title:', error);
+            console.error('Error updating component:', error);
           }
         });
       }
@@ -383,6 +476,19 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   cancelEdit(): void {
     this.editingComponent.set(null);
     this.editTitle.set('');
+    this.editChartConfig.set(null);
+  }
+
+  updateChartConfig(key: string, value: any): void {
+    this.editChartConfig.update(config => ({
+      ...config,
+      [key]: value
+    }));
+  }
+
+  isEditingTable(): boolean {
+    const component = this.components().find(comp => comp.id === this.editingComponent());
+    return component?.type === 'table';
   }
 
   handleColumnsChange(id: any, newColumns: string[]): void {

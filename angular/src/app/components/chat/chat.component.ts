@@ -351,7 +351,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         columns: dashboard.columns,
         isQueryEditable: false,
         user_id: sessionStorage.getItem('userId') || '',
-        json_config: null
+        json_config: undefined
       };
 
       console.log('Adding new component:', newComponent);
@@ -364,7 +364,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
           // Preserve existing json_config from the old component
           const existingComponent = this.dashboardState().components.find(c => c.id === this.editableComponentId);
           if (existingComponent?.json_config) {
-            newComponent.json_config = existingComponent.json_config;
+            (newComponent as any).json_config = existingComponent.json_config;
           }
 
           this.dashboardService.updateComponent(newComponent);

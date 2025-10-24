@@ -75,7 +75,7 @@
   </div>
 
   <!-- Pagination Controls (Top) -->
-  @if (data() && data().length > 0) {
+  @if (data() && data().length > 0 && showPagination()) {
     <div class="flex justify-between items-center mb-4">
       <div class="flex items-center space-x-2">
         <span class="text-sm text-gray-700">Show</span>
@@ -119,12 +119,24 @@
   }
 
   <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
+    <table
+      [ngClass]="{
+        'min-w-full divide-y': true,
+        'divide-gray-200': showBorders(),
+        'divide-transparent': !showBorders()
+      }"
+    >
       <thead class="bg-gray-50">
         <tr>
           @for (column of displayColumns(); track $index; let i = $index) {
             <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-move select-none"
+              [ngClass]="{
+                'text-left text-xs uppercase tracking-wider cursor-move select-none': true,
+                'px-6 py-3': !isDenseLayout(),
+                'px-3 py-2': isDenseLayout(),
+                'font-medium text-gray-500': true
+              }"
+              [style]="getHeaderStyle()"
               draggable="true"
               (dragstart)="onDragStart($event, i)"
               (dragover)="onDragOver($event)"
@@ -148,11 +160,29 @@
           }
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-        @for (row of paginatedData(); track $index; let i = $index) {
-          <tr [class]="i % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
+      <tbody
+        [ngClass]="{
+          'bg-white divide-y': true,
+          'divide-gray-200': showBorders(),
+          'divide-transparent': !showBorders()
+        }"
+      >
+        @for (row of paginatedData(); track $index; let i = $index; let isOdd = $odd) {
+          <tr
+            [ngClass]="{
+              'hover:bg-gray-50 transition-colors': hasHoverEffect(),
+              'bg-gray-50': isStripedRows() && isOdd,
+              'bg-white': !isStripedRows() || !isOdd
+            }"
+          >
             @for (column of displayColumns(); track $index) {
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td
+                [ngClass]="{
+                  'whitespace-nowrap text-sm text-gray-900': true,
+                  'px-6 py-4': !isDenseLayout(),
+                  'px-3 py-2': isDenseLayout()
+                }"
+              >
                 {{ getValueByKey(row, column) }}
               </td>
             }
@@ -162,13 +192,15 @@
     </table>
   </div>
 
-  <app-pager
-    [currentPage]="currentPage()"
-    [totalPages]="totalPages()"
-    [totalItems]="data().length"
-    [itemsPerPage]="pageSize()"
-    (onPageChange)="handlePageChange($event)"
-  />
+  @if (data() && data().length > 0 && showPagination()) {
+    <app-pager
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalItems]="data().length"
+      [itemsPerPage]="pageSize()"
+      (onPageChange)="handlePageChange($event)"
+    />
+  }
 
   @if (!data() || data().length === 0) {
     <div class="text-center py-8">

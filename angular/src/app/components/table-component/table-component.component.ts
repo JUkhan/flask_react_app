@@ -23,6 +23,7 @@ export class TableComponentComponent implements OnInit {
   readonly query = input<string>();
   readonly type = input<string>();
   readonly isQueryEditable = input<boolean>();
+  readonly json_config = input<any>();
 
   // Signal outputs
   readonly onRemove = output<any>();
@@ -65,6 +66,14 @@ export class TableComponentComponent implements OnInit {
       const editable = this.isQueryEditable();
       console.log(`Table ${this.id()} - isQueryEditable changed to:`, editable);
     });
+
+    // React to config changes
+    effect(() => {
+      const config = this.json_config();
+      if (config?.table) {
+        this.applyTableConfig(config.table);
+      }
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {
@@ -209,5 +218,57 @@ export class TableComponentComponent implements OnInit {
 
   getValueByKey(obj: any, key: string): any {
     return obj[key];
+  }
+
+  private applyTableConfig(config: any): void {
+    // Apply pagination settings
+    if (config.showPagination === false) {
+      // User can hide pagination if needed
+    }
+    if (config.pageSize) {
+      this.pageSize.set(config.pageSize);
+      this.updatePagination();
+    }
+
+    // Other table styling is handled via CSS classes in the template
+  }
+
+  // Helper methods for template
+  showPagination(): boolean {
+    const config = this.json_config();
+    return config?.table?.showPagination !== false;
+  }
+
+  isStripedRows(): boolean {
+    const config = this.json_config();
+    return config?.table?.stripedRows !== false;
+  }
+
+  showBorders(): boolean {
+    const config = this.json_config();
+    return config?.table?.showBorders !== false;
+  }
+
+  hasHoverEffect(): boolean {
+    const config = this.json_config();
+    return config?.table?.hoverEffect !== false;
+  }
+
+  isDenseLayout(): boolean {
+    const config = this.json_config();
+    return config?.table?.denseLayout === true;
+  }
+
+  getHeaderStyle(): string {
+    const config = this.json_config();
+    const style = config?.table?.headerStyle || 'default';
+
+    if (style === 'colored') {
+      const color = config?.table?.headerColor || '#3b82f6';
+      return `background-color: ${color}; color: white;`;
+    } else if (style === 'bold') {
+      return 'font-weight: 700;';
+    }
+    return '';
   }
 }

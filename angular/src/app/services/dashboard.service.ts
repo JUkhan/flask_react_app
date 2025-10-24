@@ -2,6 +2,66 @@ import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface ChartConfig {
+  // Common chart settings
+  showLegend?: boolean;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  responsive?: boolean;
+  maintainAspectRatio?: boolean;
+
+  // Animation
+  animationEnabled?: boolean;
+  animationDuration?: number;
+  animationEasing?: 'linear' | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad' | 'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic';
+
+  // Colors
+  colorScheme?: 'default' | 'pastel' | 'vibrant' | 'monochrome' | 'cool' | 'warm';
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+
+  // Grid and axes (for line/bar charts)
+  showGrid?: boolean;
+  gridColor?: string;
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  beginAtZero?: boolean;
+
+  // Line chart specific
+  tension?: number; // Curve smoothness (0 = straight, 1 = very curved)
+  fill?: boolean; // Fill area under line
+  pointRadius?: number;
+  pointStyle?: 'circle' | 'cross' | 'crossRot' | 'dash' | 'line' | 'rect' | 'rectRounded' | 'rectRot' | 'star' | 'triangle';
+
+  // Bar chart specific
+  barThickness?: number | 'flex';
+  maxBarThickness?: number;
+
+  // Pie/Donut chart specific
+  cutout?: string; // For donut charts (e.g., "50%")
+  rotation?: number;
+  circumference?: number;
+
+  // Tooltip
+  showTooltip?: boolean;
+
+  // Title
+  showTitle?: boolean;
+  titlePosition?: 'top' | 'bottom';
+  titleAlign?: 'start' | 'center' | 'end';
+}
+
+export interface TableConfig {
+  showPagination?: boolean;
+  pageSize?: number;
+  stripedRows?: boolean;
+  showBorders?: boolean;
+  hoverEffect?: boolean;
+  denseLayout?: boolean;
+  headerStyle?: 'default' | 'bold' | 'colored';
+  headerColor?: string;
+}
+
 export interface SComponent {
   id: any;
   type: 'line' | 'bar' | 'pie' | 'table' | 'donut';
@@ -11,7 +71,16 @@ export interface SComponent {
   columns: string[];
   user_id?: any;
   isQueryEditable?: boolean;
-  json_config?: any;
+  json_config?: {
+    grid?: { x: number; y: number; w: number; h: number };
+    chart?: ChartConfig;
+    table?: TableConfig;
+    createdAt?: string;
+    lastModified?: string;
+    version?: string;
+    source?: string;
+    updatedFrom?: string;
+  };
 }
 
 export interface DashboardState {
