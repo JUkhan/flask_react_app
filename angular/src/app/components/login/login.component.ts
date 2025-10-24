@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -12,14 +12,14 @@ import { Router } from '@angular/router';
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
-  username = '';
-  email = '';
+  username = signal('');
+  email = signal('');
 
   constructor(private http: HttpClient, private router: Router) { }
 
   onSubmit(): void {
-    console.log('Login attempted with:', this.username, this.email);
-    this.http.post('/api/login', { username: this.username, email: this.email })
+    console.log('Login attempted with:', this.username(), this.email());
+    this.http.post('/api/login', { username: this.username(), email: this.email() })
       .subscribe({
         next: (response: any) => {
           console.log('Login successful:', response);

@@ -9,7 +9,7 @@
         : 'bg-blue-500 hover:bg-blue-600 text-white')
     "
   >
-    <ng-container *ngIf="isOpen(); else chatIcon">
+    @if (isOpen()) {
       <svg
         class="w-6 h-6"
         fill="none"
@@ -23,8 +23,7 @@
           d="M6 18L18 6M6 6l12 12"
         />
       </svg>
-    </ng-container>
-    <ng-template #chatIcon>
+    } @else {
       <svg
         class="w-6 h-6"
         fill="none"
@@ -38,7 +37,7 @@
           d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
         />
       </svg>
-    </ng-template>
+    }
   </button>
 
   <!-- Chat Window -->
@@ -77,12 +76,12 @@
             />
           </svg>
         </button>
-        <button
-          *ngIf="hasEditableComponent()"
-          (click)="disableQueryEditMode()"
-          class="hover:rounded-lg hover:bg-red-600 p-1 transition-colors"
-          title="Query edit mode is active"
-        >
+        @if (hasEditableComponent()) {
+          <button
+            (click)="disableQueryEditMode()"
+            class="hover:rounded-lg hover:bg-red-600 p-1 transition-colors"
+            title="Query edit mode is active"
+          >
           <svg
             class="w-4 h-4"
             fill="none"
@@ -102,7 +101,8 @@
               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-        </button>
+          </button>
+        }
       </div>
       <button
         (click)="closeChat()"
@@ -130,13 +130,13 @@
       style="height: 360px"
       #messagesContainer
     >
-      <div
-        *ngFor="let message of messages()"
-        [class]="
-          'flex ' +
-          (message.sender === 'user' ? 'justify-end' : 'justify-start')
-        "
-      >
+      @for (message of messages(); track message.id) {
+        <div
+          [class]="
+            'flex ' +
+            (message.sender === 'user' ? 'justify-end' : 'justify-start')
+          "
+        >
         <div
           [class]="
             'max-w-xs px-4 py-2 rounded-lg ' +
@@ -145,79 +145,76 @@
               : 'bg-blue-200 text-gray-800 rounded-bl-none relative group')
           "
         >
-          <button
-            *ngIf="message.hasSql && message.text !== query()"
-            [disabled]="isLoading()"
-            (click)="loadSqlData(message.text)"
-            title="Click to load data"
-            class="p-1 cursor-pointer opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 text-red-400 hover:text-red-600 transition-colors"
-          >
-            <svg
-              *ngIf="!isLoading()"
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          @if (message.hasSql && message.text !== query()) {
+            <button
+              [disabled]="isLoading()"
+              (click)="loadSqlData(message.text)"
+              title="Click to load data"
+              class="p-1 cursor-pointer opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 text-red-400 hover:text-red-600 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            <svg
-              *ngIf="isLoading()"
-              class="w-4 h-4 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-          </button>
-          <div class="text-sm">
-            <ng-container
-              *ngIf="
-                message.hasSql && message.text === query();
-                else showMessageText
-              "
-            >
-              <div class="flex flex-wrap gap-2 mb-2">
-                <button
-                  *ngFor="let component of components()"
-                  (click)="addComponent(component.type)"
-                  class="px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors shadow-md"
+              @if (!isLoading()) {
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <lucide-angular
-                    size="16"
-                    [img]="component.icon"
-                    class="inline-block"
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
-                  {{ component.name }}
-                </button>
+                </svg>
+              }
+              @if (isLoading()) {
+                <svg
+                  class="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              }
+            </button>
+          }
+          <div class="text-sm">
+            @if (message.hasSql && message.text === query()) {
+              <div class="flex flex-wrap gap-2 mb-2">
+                @for (component of components(); track component.type) {
+                  <button
+                    (click)="addComponent(component.type)"
+                    class="px-2 py-1 text-xs rounded cursor-pointer bg-gray-100 hover:text-fuchsia-700 transition-colors shadow-md"
+                  >
+                    <lucide-angular
+                      size="16"
+                      [img]="component.icon"
+                      class="inline-block"
+                    />
+                    {{ component.name }}
+                  </button>
+                }
               </div>
-              <div
-                *ngIf="components().length === 0 && error()"
-                class="text-red-500"
-              >
-                {{ error() }}
-              </div>
-            </ng-container>
-            <ng-template #showMessageText>
+              @if (components().length === 0 && error()) {
+                <div class="text-red-500">
+                  {{ error() }}
+                </div>
+              }
+            } @else {
               <span>{{ message.text }}</span>
-            </ng-template>
+            }
           </div>
           <p
             [class]="
@@ -228,45 +225,50 @@
             {{ formatTime(message.timestamp) }}
           </p>
         </div>
-      </div>
+        </div>
+      }
 
       <!-- Typing Indicator -->
-      <div *ngIf="isTyping()" class="flex justify-start">
-        <div
-          class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg rounded-bl-none"
-        >
-          <div class="flex space-x-1">
-            <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-            <div
-              class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-              style="animation-delay: 0.2s"
-            ></div>
-            <div
-              class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-              style="animation-delay: 0.4s"
-            ></div>
+      @if (isTyping()) {
+        <div class="flex justify-start">
+          <div
+            class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg rounded-bl-none"
+          >
+            <div class="flex space-x-1">
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+              <div
+                class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                style="animation-delay: 0.2s"
+              ></div>
+              <div
+                class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                style="animation-delay: 0.4s"
+              ></div>
+            </div>
           </div>
         </div>
-      </div>
+      }
     </div>
 
     <!-- Input Area -->
     <div class="relative border-t p-4">
       <!-- Help Desk Suggestions -->
-      <div
-        *ngIf="helpDeskResults().length > 0"
-        class="absolute bottom-full left-0 right-0 bg-white border border-gray-300 rounded-t-lg shadow-lg z-10 max-h-48 overflow-y-auto"
-      >
-        <ul>
-          <li
-            *ngFor="let result of helpDeskResults()"
-            (click)="helpDeskAction(result)"
-            class="p-2 cursor-pointer hover:bg-gray-100"
-          >
-            {{ result.title }}
-          </li>
-        </ul>
-      </div>
+      @if (helpDeskResults().length > 0) {
+        <div
+          class="absolute bottom-full left-0 right-0 bg-white border border-gray-300 rounded-t-lg shadow-lg z-10 max-h-48 overflow-y-auto"
+        >
+          <ul>
+            @for (result of helpDeskResults(); track $index) {
+              <li
+                (click)="helpDeskAction(result)"
+                class="p-2 cursor-pointer hover:bg-gray-100"
+              >
+                {{ result.title }}
+              </li>
+            }
+          </ul>
+        </div>
+      }
 
       <div class="flex space-x-2">
         <button (click)="toggleListening()" class="focus:outline-none">

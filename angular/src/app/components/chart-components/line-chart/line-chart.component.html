@@ -84,7 +84,9 @@
     </canvas>
   </div>
 
-  <div *ngIf="!data() || data().length === 0" class="text-center py-8">
-    <p class="text-gray-500">No data available for chart</p>
-  </div>
+  @if (!data() || data().length === 0) {
+    <div class="text-center py-8">
+      <p class="text-gray-500">No data available for chart</p>
+    </div>
+  }
 </div>

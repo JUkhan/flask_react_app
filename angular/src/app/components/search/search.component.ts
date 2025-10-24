@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardService } from '../../services/dashboard.service';
@@ -12,9 +12,9 @@ import { DashboardService } from '../../services/dashboard.service';
 })
 export class SearchComponent implements AfterViewInit {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLTextAreaElement>;
-  
-  query = 'show unique transaction of sender name and amount';
-  loading = false;
+
+  query = signal('show unique transaction of sender name and amount');
+  loading = signal(false);
 
   constructor(private dashboardService: DashboardService) {}
 
@@ -26,7 +26,7 @@ export class SearchComponent implements AfterViewInit {
   }
 
   clearSearch(): void {
-    this.query = '';
+    this.query.set('');
   }
 
   onEnterKey(event: any): void {
@@ -40,21 +40,21 @@ export class SearchComponent implements AfterViewInit {
   }
 
   getData(): void {
-    if (!this.query.trim()) return;
-    
-    this.loading = true;
+    if (!this.query().trim()) return;
+
+    this.loading.set(true);
     this.dashboardService.setTypesAndData([], [], '', []);
-    
-    this.dashboardService.getQueryResult(this.query)
+
+    this.dashboardService.getQueryResult(this.query())
       .subscribe({
         next: (data) => {
           console.log('Query result:', data);
-          this.loading = false;
+          this.loading.set(false);
           this.dashboardService.takeDecision(data);
         },
         error: (error) => {
           console.error('Error fetching data:', error);
-          this.loading = false;
+          this.loading.set(false);
         }
       });
   }
