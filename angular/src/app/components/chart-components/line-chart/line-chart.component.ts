@@ -92,6 +92,7 @@ export class LineChartComponent implements OnInit {
   private updateChartData(): void {
     const data = this.data();
     const columns = this.columns();
+    const config = this.json_config();
 
     if (!data || data.length === 0 || !columns || columns.length < 2) {
       return;
@@ -99,6 +100,10 @@ export class LineChartComponent implements OnInit {
 
     const labels = data.map(item => item[columns[0]]);
     const datasets = [];
+
+    const colorScheme = config?.chart?.colorScheme || 'default';
+    const borderWidth = config?.chart?.borderWidth ?? 2;
+    const schemeColors = this.getColorsByScheme(columns.length - 1, colorScheme);
 
     // Create datasets for numeric columns
     for (let i = 1; i < columns.length; i++) {
@@ -108,15 +113,18 @@ export class LineChartComponent implements OnInit {
         return typeof value === 'number' ? value : parseFloat(value) || 0;
       });
 
+      const baseColor = schemeColors[i - 1];
+
       datasets.push({
         data: values,
         label: column,
-        backgroundColor: this.getColor(i - 1, 0.2),
-        borderColor: this.getColor(i - 1, 1),
-        pointBackgroundColor: this.getColor(i - 1, 1),
+        backgroundColor: baseColor.replace(/[\d.]+\)$/, '0.2)'),
+        borderColor: baseColor,
+        pointBackgroundColor: baseColor,
         pointBorderColor: '#fff',
         pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: this.getColor(i - 1, 0.8)
+        pointHoverBorderColor: baseColor.replace(/[\d.]+\)$/, '0.8)'),
+        borderWidth: borderWidth
       });
     }
 
@@ -127,36 +135,41 @@ export class LineChartComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  private getColor(index: number, alpha: number): string {
-    const baseColors = [
-      `rgba(54, 162, 235, ${alpha})`,   // Blue
-      `rgba(255, 99, 132, ${alpha})`,   // Red
-      `rgba(255, 205, 86, ${alpha})`,   // Yellow
-      `rgba(75, 192, 192, ${alpha})`,   // Green
-      `rgba(153, 102, 255, ${alpha})`,  // Purple
-      `rgba(255, 159, 64, ${alpha})`,   // Orange
-      `rgba(255, 20, 147, ${alpha})`,   // Deep Pink
-      `rgba(0, 191, 255, ${alpha})`,    // Deep Sky Blue
-      `rgba(50, 205, 50, ${alpha})`,    // Lime Green
-      `rgba(255, 140, 0, ${alpha})`,    // Dark Orange
-      `rgba(147, 112, 219, ${alpha})`,  // Medium Purple
-      `rgba(255, 69, 0, ${alpha})`,     // Red Orange
-      `rgba(0, 255, 255, ${alpha})`,    // Cyan
-      `rgba(255, 192, 203, ${alpha})`,  // Pink
-      `rgba(124, 252, 0, ${alpha})`,    // Lawn Green
-      `rgba(255, 0, 255, ${alpha})`,    // Magenta
-      `rgba(255, 215, 0, ${alpha})`,    // Gold
-      `rgba(64, 224, 208, ${alpha})`,   // Turquoise
-      `rgba(255, 105, 180, ${alpha})`,  // Hot Pink
-      `rgba(32, 178, 170, ${alpha})`,   // Light Sea Green
-      `rgba(255, 99, 71, ${alpha})`,    // Tomato
-      `rgba(138, 43, 226, ${alpha})`,   // Blue Violet
-      `rgba(255, 127, 80, ${alpha})`,   // Coral
-      `rgba(0, 128, 128, ${alpha})`,    // Teal
-      `rgba(255, 182, 193, ${alpha})`,  // Light Pink
-      `rgba(72, 61, 139, ${alpha})`     // Dark Slate Blue
-    ];
-    return baseColors[index % baseColors.length];
+  private getColorsByScheme(count: number, scheme: string = 'default'): string[] {
+    const schemes: any = {
+      default: [
+        'rgba(54, 162, 235, 0.7)',   // Blue
+        'rgba(255, 99, 132, 0.7)',   // Red
+        'rgba(255, 205, 86, 0.7)',   // Yellow
+        'rgba(75, 192, 192, 0.7)',   // Green
+        'rgba(153, 102, 255, 0.7)',  // Purple
+        'rgba(255, 159, 64, 0.7)',   // Orange
+      ],
+      pastel: [
+        'rgba(255, 179, 186, 0.7)', 'rgba(255, 223, 186, 0.7)', 'rgba(255, 255, 186, 0.7)',
+        'rgba(186, 255, 201, 0.7)', 'rgba(186, 225, 255, 0.7)', 'rgba(220, 190, 255, 0.7)'
+      ],
+      vibrant: [
+        'rgba(255, 0, 0, 0.7)', 'rgba(255, 127, 0, 0.7)', 'rgba(255, 255, 0, 0.7)',
+        'rgba(0, 255, 0, 0.7)', 'rgba(0, 0, 255, 0.7)', 'rgba(139, 0, 255, 0.7)'
+      ],
+      monochrome: Array.from({ length: count }, (_, i) => {
+        const intensity = 255 - (i * (200 / count));
+        return `rgba(${intensity}, ${intensity}, ${intensity}, 0.7)`;
+      }),
+      cool: [
+        'rgba(0, 191, 255, 0.7)', 'rgba(30, 144, 255, 0.7)', 'rgba(65, 105, 225, 0.7)',
+        'rgba(0, 255, 255, 0.7)', 'rgba(64, 224, 208, 0.7)', 'rgba(72, 209, 204, 0.7)'
+      ],
+      warm: [
+        'rgba(255, 99, 71, 0.7)', 'rgba(255, 140, 0, 0.7)', 'rgba(255, 215, 0, 0.7)',
+        'rgba(255, 69, 0, 0.7)', 'rgba(255, 160, 122, 0.7)', 'rgba(255, 127, 80, 0.7)'
+      ]
+    };
+
+    const colors = schemes[scheme] || schemes.default;
+    // Repeat colors if needed
+    return Array.from({ length: count }, (_, i) => colors[i % colors.length]);
   }
 
   handleRemove(): void {
@@ -172,9 +185,15 @@ export class LineChartComponent implements OnInit {
   }
 
   private applyChartConfig(config: any): void {
+    console.log('***Applying chart config:', config);
     // Apply chart configuration options
     this.lineChartOptions = {
       responsive: config.responsive !== false,
+      //@ts-ignore
+      fill: config.fill || false,
+      //@ts-ignore
+      pointStyle: config.pointStyle || 'circle',
+      pointRadius: config.pointRadius || 3,
       maintainAspectRatio: config.maintainAspectRatio !== false,
       animation: config.animationEnabled !== false ? {
         duration: config.animationDuration || 1000,

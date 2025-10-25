@@ -95,6 +95,7 @@ export class BarChartComponent implements OnInit {
   private updateChartData(): void {
     const data = this.data();
     const columns = this.columns();
+    const config = this.json_config();
 
     if (!data || data.length === 0 || !columns || columns.length < 2) {
       return;
@@ -111,12 +112,16 @@ export class BarChartComponent implements OnInit {
         return typeof value === 'number' ? value : parseFloat(value) || 0;
       });
 
+      const colorScheme = config?.chart?.colorScheme || 'default';
+      const borderWidth = config?.chart?.borderWidth ?? 1;
+      const colors = this.getColorsByScheme(values.length, colorScheme);
+
       datasets.push({
         data: values,
         label: column,
-        backgroundColor: this.dashboardService.generateColors(values.length, 0.6),
-        borderColor: this.dashboardService.generateColors(values.length, 1),
-        borderWidth: 1
+        backgroundColor: colors.map(c => c.replace(/[\d.]+\)$/, '0.6)')),
+        borderColor: colors,
+        borderWidth: borderWidth
       });
     }
 
@@ -179,5 +184,35 @@ export class BarChartComponent implements OnInit {
     };
 
     this.updateChartData();
+  }
+
+  private getColorsByScheme(count: number, scheme: string = 'default'): string[] {
+    const schemes: any = {
+      default: this.dashboardService.generateColors(count, 0.7),
+      pastel: [
+        'rgba(255, 179, 186, 0.7)', 'rgba(255, 223, 186, 0.7)', 'rgba(255, 255, 186, 0.7)',
+        'rgba(186, 255, 201, 0.7)', 'rgba(186, 225, 255, 0.7)', 'rgba(220, 190, 255, 0.7)'
+      ],
+      vibrant: [
+        'rgba(255, 0, 0, 0.7)', 'rgba(255, 127, 0, 0.7)', 'rgba(255, 255, 0, 0.7)',
+        'rgba(0, 255, 0, 0.7)', 'rgba(0, 0, 255, 0.7)', 'rgba(139, 0, 255, 0.7)'
+      ],
+      monochrome: Array.from({ length: count }, (_, i) => {
+        const intensity = 255 - (i * (200 / count));
+        return `rgba(${intensity}, ${intensity}, ${intensity}, 0.7)`;
+      }),
+      cool: [
+        'rgba(0, 191, 255, 0.7)', 'rgba(30, 144, 255, 0.7)', 'rgba(65, 105, 225, 0.7)',
+        'rgba(0, 255, 255, 0.7)', 'rgba(64, 224, 208, 0.7)', 'rgba(72, 209, 204, 0.7)'
+      ],
+      warm: [
+        'rgba(255, 99, 71, 0.7)', 'rgba(255, 140, 0, 0.7)', 'rgba(255, 215, 0, 0.7)',
+        'rgba(255, 69, 0, 0.7)', 'rgba(255, 160, 122, 0.7)', 'rgba(255, 127, 80, 0.7)'
+      ]
+    };
+
+    const colors = schemes[scheme] || schemes.default;
+    // Repeat colors if needed
+    return Array.from({ length: count }, (_, i) => colors[i % colors.length]);
   }
 }
