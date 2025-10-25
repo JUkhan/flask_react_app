@@ -1,4 +1,3 @@
-
 services:
   angular:
     build:
@@ -9,14 +8,14 @@ services:
     networks:
       - app-network
 
-  react:
-    build:
-      context: ./react
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    networks:
-      - app-network
+  # react:
+  #   build:
+  #     context: ./react
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:80"
+  #   networks:
+  #     - app-network
 
   api:
     build:
