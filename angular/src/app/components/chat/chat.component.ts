@@ -378,7 +378,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   addComponent(type: string): void {
-    console.log('Adding component of type:', type, this.components());
+    console.log('Adding component of type:', type);
     const componentType = this.components().find((ct: any) => ct.type === type);
     const dashboard = this.dashboardService.getDashboard();
     if (componentType && dashboard.columns.length > 0) {
@@ -404,6 +404,10 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
           // Preserve existing json_config from the old component
           const existingComponent = this.dashboardState().components.find(c => c.id === this.editableComponentId);
           if (existingComponent?.json_config) {
+            if (type !== existingComponent.type) {
+              existingComponent.json_config.chart = undefined;
+              existingComponent.json_config.table = undefined;
+            }
             (newComponent as any).json_config = existingComponent.json_config;
           }
 
