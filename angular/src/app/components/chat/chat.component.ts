@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, AfterViewChecked, OnDestroy, signal, computed, effect, ChangeDetectionStrategy, input } from '@angular/core';
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -210,6 +210,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
     this.helpDeskResults.set([]);
   }
+
   startNewConversation(): void {
     this.inputValue.set('new conversation');
     this.handleSendMessage();
@@ -217,6 +218,32 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   findSqlByEditableComponentId(id: any): string | null {
     const component = this.dashboardState().components.find(comp => comp.id === id);
     return component ? component.query : null;
+  }
+  private loadQueryForEditableComponent(sql: string, type: string): void {
+    this.chatService.executeQuery(sql).subscribe({
+      next: (data) => {
+        console.log('SQL execution result:', data);
+        this.isLoading.set(false);
+        data.query = sql;
+        this.dashboardService.takeDecision(data);
+        this.selectedHelpDesk = null; // Clear selected help desk after execution
+        this.addComponent(type);
+        this.isTyping.set(false);
+        const botResponse: Message = {
+          id: this.messages().length + 1,
+          text: sql,
+          sender: 'bot',
+          hasSql: true,
+          timestamp: new Date()
+        };
+        this.messages.update(msgs => [...msgs, botResponse]);
+
+
+      },
+      error: (error) => {
+        this.isLoading.set(false);
+      }
+    });
   }
   handleSendMessage(): void {
     if (this.inputValue().trim() === '') return;
@@ -236,6 +263,19 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.helpDeskResults.set([]);
     if (this.editableComponentId) {
       const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId)!;
+      const inputLower = userInput.toLowerCase();
+      // check inputLower for keywords
+      let keywords = ['make', 'produce', 'generate', 'change', 'update', 'upgrade', 'transform', 'convert', 'turn'];
+      if (keywords.some(keyword => inputLower.includes(keyword))) {
+        keywords = ['line chart', 'bar chart', 'pie chart', 'donut chart', 'table'];
+        if (keywords.some(keyword => inputLower.includes(keyword))) {
+          keywords = ['line', 'bar', 'pie', 'donut', 'table'];
+          // get first word that matches
+          const chartType = keywords.find(keyword => inputLower.includes(keyword))!;
+          this.loadQueryForEditableComponent(component.query, chartType);
+          return;
+        }
+      }
       if (component?.query && this.hasVirginEditableComponent) {
         userInput = `Based on the following SQL query: ${component.query}, please regenerate the query adding following statement: ${userInput}`;
         this.hasVirginEditableComponent = false;
@@ -338,7 +378,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   addComponent(type: string): void {
-    console.log('Adding component of type:', type);
+    console.log('Adding component of type:', type, this.components());
     const componentType = this.components().find((ct: any) => ct.type === type);
     const dashboard = this.dashboardService.getDashboard();
     if (componentType && dashboard.columns.length > 0) {
@@ -436,6 +476,7 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       }
     }
   }
+
   ngOnDestroy() {
     this.transcriptSubscription.unsubscribe();
     this.errorSubscription.unsubscribe();
