@@ -265,9 +265,9 @@ export class ChatComponent implements OnInit, AfterViewChecked, OnDestroy {
       const component = this.dashboardState().components.find(comp => comp.id === this.editableComponentId)!;
       const inputLower = userInput.toLowerCase();
       // check inputLower for keywords
-      let keywords = ['make', 'produce', 'generate', 'change', 'update', 'upgrade', 'transform', 'convert', 'turn'];
-      if (keywords.some(keyword => inputLower.includes(keyword))) {
-        keywords = ['line chart', 'bar chart', 'pie chart', 'donut chart', 'table'];
+      //let keywords = ['make', 'produce', 'generate', 'change', 'update', 'upgrade', 'transform', 'convert', 'turn'];
+      if (inputLower.startsWith('make')) {
+        let keywords = ['line chart', 'bar chart', 'pie chart', 'donut chart', 'table'];
         if (keywords.some(keyword => inputLower.includes(keyword))) {
           keywords = ['line', 'bar', 'pie', 'donut', 'table'];
           // get first word that matches
