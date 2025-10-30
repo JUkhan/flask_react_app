@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Plus, BarChart3, TrendingUp, DonutIcon, PieChart as PieChartIcon, Grid3X3 } from 'lucide-react';
 import { useDashboardStore, addComponentState, updateComponentState, removeComponentState, setDashboardState } from './appStore';
 import { useEffect } from 'react';
@@ -6,6 +6,9 @@ import TableComponent from './TableComponent';
 import LineChartComponent from './LineChartComponent';
 import BarChartComponent from './BarChartComponent';
 import PieChartComponent from './PieChartComponent';
+import GridLayout from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import ComponentConfigModal from './ComponentConfigModal';
 
 
 const componentMapByType = {
@@ -20,7 +23,7 @@ const DashboardContainer = () => {
   //const [components, setComponents] = useState([]);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [editingComponent, setEditingComponent] = useState(null);
-  const [editTitle, setEditTitle] = useState('');
+  const [gridLayout, setGridLayout] = useState([]);
   const dashboard=useDashboardStore()
   console.log('Dashboard data:', dashboard);
   useEffect(() => {
@@ -28,18 +31,51 @@ const DashboardContainer = () => {
     if (userId) {
       console.log('User ID from sessionStorage:', userId);
       fetch(`/api/dashboards/${userId}`)
-        .then(response => response.json())  
+        .then(response => response.json())
         .then(response =>response.data)
         .then(data => {
           console.log('Fetched dashboard data:', data);
            const types=new Set(data.map(component => component.type));
-            data=data.map(component => {
+           const savedLayout = [];
+
+            data=data.map((component, index) => {
               component.columns = component.columns.split(',').map(col => col.trim());
+
+              // Parse json_config if it exists
+              if (component.json_config) {
+                try {
+                  if (typeof component.json_config === 'string') {
+                    component.json_config = JSON.parse(component.json_config);
+                  }
+                } catch (error) {
+                  console.warn('Failed to parse json_config for component', component.id, error);
+                  component.json_config = null;
+                }
+              }
+
+              // Extract grid layout from json_config
+              if (component.json_config?.grid) {
+                savedLayout.push({
+                  i: String(component.id),
+                  x: component.json_config.grid.x,
+                  y: component.json_config.grid.y,
+                  w: component.json_config.grid.w || 6,
+                  h: component.json_config.grid.h || 4
+                });
+              }
+
               return component;
             });
           console.log('Processed dashboard data:', data);
-          setDashboardState({ components: data, types: Array.from(types)});  
-          
+          console.log('Saved layout positions:', savedLayout);
+
+          // Set grid layout if we have saved positions
+          if (savedLayout.length > 0) {
+            setGridLayout(savedLayout);
+          }
+
+          setDashboardState({ components: data, types: Array.from(types)});
+
         })
     }
   }, []);
@@ -69,7 +105,7 @@ const DashboardContainer = () => {
     const componentType = componentTypes.find(ct => ct.type === type);
     if (componentType) {
       const newComponent = {
-        id: Number(new Date().getTime()), 
+        id: Number(new Date().getTime()),
         type: type,
         title: componentType.defaultTitle,
         component: componentType.component,
@@ -83,8 +119,26 @@ const DashboardContainer = () => {
       if(newComponent.user_id) {
         const copyComponent = { ...newComponent };
         copyComponent.columns = copyComponent.columns.join(',');
-        delete copyComponent.component; 
+        delete copyComponent.component;
         delete copyComponent.data;
+
+        // Calculate default grid position for new component
+        const index = dashboard.components.length;
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+
+        // Prepare json_config with grid layout
+        copyComponent.json_config = JSON.stringify({
+          grid: {
+            x: col * 6,
+            y: row * 4,
+            w: 6,
+            h: 4
+          },
+          createdAt: new Date().toISOString(),
+          version: '1.0'
+        });
+
         fetch('/api/dashboard', {
           method: 'POST',
           headers: {
@@ -97,7 +151,12 @@ const DashboardContainer = () => {
         .then(data => {
           console.log('New component ID:', data.id, newComponent.id);
           let components=dashboard.components.filter(comp => comp.id !== newComponent.id);
-          components.unshift({ ...newComponent, id: data.id });
+          const updatedComponent = {
+            ...newComponent,
+            id: data.id,
+            json_config: JSON.parse(copyComponent.json_config)
+          };
+          components.unshift(updatedComponent);
           console.log('Updated components:', components);
           setDashboardState({ components });
           console.log('Component added successfully:', data);
@@ -133,36 +192,55 @@ const DashboardContainer = () => {
   }, [dashboard.components]);
 
   const startEditing = useCallback((id, currentTitle) => {
-    setEditingComponent(id);
-    setEditTitle(currentTitle);
-  }, []);
+    const component = dashboard.components.find(comp => comp.id === id);
+    setEditingComponent(component);
+  }, [dashboard.components]);
 
-  const saveEdit = useCallback(() => {
-    const component= dashboard.components.find(comp => comp.id === editingComponent);
-    updateComponentState({...component, title:editTitle});
-    setEditingComponent(null);
-    setEditTitle('');
-    if (component && component.user_id) {
-      fetch(`/api/dashboard/${component.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: editTitle }),
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Component updated successfully:', data);
-      })
-      .catch(error => {
-        console.error('Error updating component:', error);
-      });
+  const saveEdit = useCallback((title, config) => {
+    const component = dashboard.components.find(comp => comp.id === editingComponent.id);
+    if (component) {
+      // Update component with new title and config
+      const updatedConfig = { ...component.json_config };
+
+      if (component.type === 'table') {
+        updatedConfig.table = config;
+      } else {
+        updatedConfig.chart = config;
+      }
+      updatedConfig.lastModified = new Date().toISOString();
+
+      const updatedComponent = {
+        ...component,
+        title: title,
+        json_config: updatedConfig
+      };
+      updateComponentState(updatedComponent);
+
+      // Update on server
+      if (component.user_id) {
+        fetch(`/api/dashboard/${component.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: title,
+            json_config: JSON.stringify(updatedConfig)
+          }),
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Component updated successfully:', data);
+        })
+        .catch(error => {
+          console.error('Error updating component:', error);
+        });
+      }
     }
-  }, [dashboard.components, editingComponent, editTitle]);
+  }, [dashboard.components, editingComponent]);
 
   const cancelEdit = useCallback(() => {
     setEditingComponent(null);
-    setEditTitle('');
   }, []);
 
   const handleColumnsChange = useCallback((id, newColumns) => {
@@ -189,47 +267,113 @@ const DashboardContainer = () => {
     }
     }, [dashboard.components]);
 
+  const handleToggleQueryEditable = useCallback((id) => {
+    const component = dashboard.components.find(comp => comp.id === id);
+    if (component) {
+      const updatedComponent = { ...component, isQueryEditable: !component.isQueryEditable };
+      updateComponentState(updatedComponent);
+      console.log('Toggled query editable for component:', id, 'to', updatedComponent.isQueryEditable);
+    }
+  }, [dashboard.components]);
+
+  const handleLayoutChange = useCallback((newLayout) => {
+    console.log('Layout changed:', newLayout);
+    setGridLayout(newLayout);
+
+    // Save layout to backend for each component
+    newLayout.forEach(item => {
+      const component = dashboard.components.find(c => String(c.id) === item.i);
+      if (component && component.user_id) {
+        // Get existing json_config or create new one
+        const existingConfig = component.json_config || {};
+
+        // Update grid layout in json_config
+        const updatedConfig = {
+          ...existingConfig,
+          grid: {
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+          },
+          lastModified: new Date().toISOString()
+        };
+
+        fetch(`/api/dashboard/${component.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ json_config: JSON.stringify(updatedConfig) }),
+        })
+        .then(response => response.json())
+        .then(() => {
+          console.log(`Layout saved for component ${component.id}`);
+        })
+        .catch(error => {
+          console.error('Error saving layout:', error);
+        });
+      }
+    });
+  }, [dashboard.components]);
+
+  // Update grid layout when components change (add/remove)
+  useEffect(() => {
+    const currentLayout = gridLayout;
+    const components = dashboard.components;
+
+    // Only update if component count changed
+    if (components.length !== currentLayout.length) {
+      console.log('Component count changed, updating grid layout');
+      const newLayout = components.map((component, index) => {
+        // Check if component already has layout info
+        const existingLayout = currentLayout.find(item => item.i === String(component.id));
+
+        if (existingLayout) {
+          return existingLayout;
+        }
+
+        // Check if component has saved grid layout in json_config
+        if (component.json_config?.grid) {
+          return {
+            i: String(component.id),
+            x: component.json_config.grid.x,
+            y: component.json_config.grid.y,
+            w: component.json_config.grid.w || 6,
+            h: component.json_config.grid.h || 4
+          };
+        }
+
+        // Create default layout for new components
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+
+        return {
+          i: String(component.id),
+          x: col * 6,
+          y: row * 4,
+          w: 6,
+          h: 4
+        };
+      });
+
+      setGridLayout(newLayout);
+    }
+  }, [dashboard.components]);
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full mx-auto" style={{ maxWidth: '1600px' }}>
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">Manage your components dynamically</p>
           </div>
-          
+
           {/* Add Component Button */}
           <div className="relative">
-            {dashboard.columns.length ? <button
-              onClick={() =>{ setShowAddMenu(!showAddMenu);console.log('Add Component clicked');}}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md"
-            >
-              <Plus size={20} />
-              Add Component
-            </button>:null}
-            
-            {/* Add Component Menu */}
-            
-            {showAddMenu && (
-              <div className="absolute right-0 top-12 bg-white rounded-lg shadow-xl border z-10 min-w-48">
-                <div className="py-2">
-                  {componentTypes.map((type) => {
-                    const IconComponent = type.icon;
-                    return (
-                      <button
-                        key={type.type}
-                        onClick={() => addComponent(type.type, componentTypes)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
-                      >
-                        <IconComponent size={18} className="text-gray-600" />
-                        <span className="text-gray-700">{type.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
 
@@ -241,65 +385,51 @@ const DashboardContainer = () => {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No components yet</h3>
             <p className="text-gray-500 mb-4">Start building your dashboard by adding some components</p>
-            {/* <button
-              onClick={() => setShowAddMenu(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
-            >
-              Add Your First Component
-            </button> */}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+          <GridLayout
+            className="layout"
+            layout={gridLayout}
+            cols={12}
+            rowHeight={100}
+            width={1550}
+            margin={[16, 16]}
+            containerPadding={[0, 0]}
+            onLayoutChange={handleLayoutChange}
+            draggableHandle=".drag-handle"
+            compactType="vertical"
+          >
             {dashboard.components.map((comp) => {
               const ComponentToRender = componentMapByType[comp.type] || TableComponent;
               return (
-                <div key={comp.id} className="relative">
+                <div key={String(comp.id)} className="relative">
                   <ComponentToRender
                     id={comp.id}
                     title={comp.title}
                     onRemove={removeComponent}
                     onEdit={startEditing}
-                    data={comp.data} 
-                    columns={comp.columns} 
+                    data={comp.data}
+                    columns={comp.columns}
                     query={comp.query}
                     type={comp.type}
+                    json_config={comp.json_config}
+                    isQueryEditable={comp.isQueryEditable}
+                    onToggleQueryEditable={handleToggleQueryEditable}
                     onColumnsChange={handleColumnsChange}
                   />
                 </div>
               );
             })}
-          </div>
+          </GridLayout>
         )}
 
-        {/* Edit Modal */}
-        {editingComponent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96">
-              <h3 className="text-lg font-semibold mb-4">Edit Component Title</h3>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter component title"
-              />
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={saveEdit}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={cancelEdit}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Component Configuration Modal */}
+        <ComponentConfigModal
+          isOpen={!!editingComponent}
+          component={editingComponent}
+          onClose={cancelEdit}
+          onSave={saveEdit}
+        />
 
         {/* Click outside to close menu */}
         {showAddMenu && (

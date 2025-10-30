@@ -20,6 +20,47 @@ export default function ChatPopup() {
   const navigate = useNavigate();
   const [isLoading, setLoading] = useState(false);
   const dashboard = useDashboardStore();
+  const [editableComponentId, setEditableComponentId] = useState(null);
+  const [hasVirginEditableComponent, setHasVirginEditableComponent] = useState(false);
+  const [isComponentUpdated, setIsComponentUpdated] = useState(false);
+
+  // Check if any component has query edit mode enabled
+  const hasEditableComponent = () => {
+    return dashboard.components.some(comp => comp.isQueryEditable);
+  };
+
+  // Track which component is editable
+  useEffect(() => {
+    const editableComp = dashboard.components.find(comp => comp.isQueryEditable);
+    if (editableComp) {
+      setEditableComponentId(editableComp.id);
+      setHasVirginEditableComponent(true);
+      console.log('Editable component set:', editableComp.id);
+    } else {
+      setEditableComponentId(null);
+      setHasVirginEditableComponent(false);
+    }
+  }, [dashboard.components]);
+
+  // Start a new conversation
+  const startNewConversation = () => {
+    setMessages([
+      { id: 1, text: "Hello! How can I help you today?", sender: "bot", timestamp: new Date(), error: '', hasSql: false }
+    ]);
+    setInputValue('');
+    console.log('Started new conversation');
+  };
+
+  // Disable query edit mode for all components
+  const disableQueryEditMode = () => {
+    const updatedComponents = dashboard.components.map(comp => ({
+      ...comp,
+      isQueryEditable: false
+    }));
+    setDashboardState({ components: updatedComponents });
+    console.log('Disabled query edit mode for all components');
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -62,46 +103,85 @@ export default function ChatPopup() {
     };
 
     setMessages(prev => [...prev, newMessage]);
+    let userInput = inputValue;
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate bot response
-    
-      const botResponse = {
-        id: messages.length + 2,
-        text: "Thanks for your message! This is a demo response.",
-        sender: "bot",
-        timestamp: new Date()
-      };
-      fetch('/api/get-query-result', {
-        method: 'POST', 
-        headers: {
-          'Content-Type': 'application/json', 
-        },
-        body: JSON.stringify({ user_input: newMessage.text, thread_id: sessionStorage.getItem('userId')||'123'})
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Bot response:', data);
-        takeDecision(data);
-        botResponse.text = data.query?data.query:'Your query description is not sufficient to generate a valid query.';
-        botResponse.timestamp = new Date();
-        botResponse.hasSql = data.query? (data.query.startsWith('SELECT') || data.query.startsWith('select')): false;
-        setMessages(prev => [...prev, botResponse]);
-        setIsTyping(false);})
-      .catch(error => {
-        console.error('Error fetching bot response:', error);
-        takeDecision(error);
-        setIsTyping(false);
-      });
-    
+    // Special logic for query edit mode
+    if (editableComponentId) {
+      const component = dashboard.components.find(comp => comp.id === editableComponentId);
+      const inputLower = userInput.toLowerCase();
+
+      // Handle "make [chart type]" commands
+      if (inputLower.startsWith('make')) {
+        const keywords = ['line', 'bar', 'pie', 'donut', 'table'];
+        const chartType = keywords.find(keyword => inputLower.includes(keyword));
+
+        if (chartType && component?.query) {
+          // Execute existing query and convert to new chart type
+          loadQueryForEditableComponent(component.query, chartType);
+          return;
+        }
+      }
+
+      // For first message in edit mode, prepend the original SQL query
+      if (component?.query && hasVirginEditableComponent) {
+        userInput = `Based on the following SQL query: ${component.query}, please regenerate the query adding following statement: ${userInput}`;
+        setHasVirginEditableComponent(false);
+      }
+
+      console.log('Query edit mode - modified input:', userInput);
+      setIsComponentUpdated(false);
+    }
+
+    // Send message to backend
+    const botResponse = {
+      id: messages.length + 2,
+      text: "Thanks for your message! This is a demo response.",
+      sender: "bot",
+      timestamp: new Date()
+    };
+
+    fetch('/api/get-query-result', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user_input: userInput, thread_id: sessionStorage.getItem('userId')||'123'})
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Bot response:', data);
+      takeDecision(data);
+      botResponse.text = data.query?data.query:'Your query description is not sufficient to generate a valid query.';
+      botResponse.timestamp = new Date();
+      botResponse.hasSql = data.query? (data.query.startsWith('SELECT') || data.query.startsWith('select')): false;
+      setMessages(prev => [...prev, botResponse]);
+      setIsTyping(false);
+
+      // Auto-update component if in edit mode
+      if (editableComponentId && data.query && !isComponentUpdated) {
+        const component = dashboard.components.find(comp => comp.id === editableComponentId);
+        if (component) {
+          setTimeout(() => {
+            addComponent(component.type)();
+            setIsComponentUpdated(true);
+          }, 500);
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching bot response:', error);
+      takeDecision(error);
+      setIsTyping(false);
+    });
   };
 
   const loadSqlData = (sql) => {
-    if (!sql) return; 
-    setLoading(true);  
+    if (!sql) return;
+    setLoading(true);
     fetch('/api/get-query-result2', {
-      method: 'POST', 
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -118,6 +198,48 @@ export default function ChatPopup() {
       error.query = sql;
       takeDecision(error);
       console.error('Error fetching SQL data:', error);
+    });
+  };
+
+  // Load query for editable component and convert to new chart type
+  const loadQueryForEditableComponent = (sql, chartType) => {
+    if (!sql) return;
+    setIsTyping(true);
+
+    fetch('/api/get-query-result2', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: sql })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Query executed for edit mode:', data);
+      data.query = sql;
+      takeDecision(data);
+
+      // Add bot response with the SQL
+      const botResponse = {
+        id: messages.length + 2,
+        text: sql,
+        sender: "bot",
+        timestamp: new Date(),
+        hasSql: sql.startsWith('SELECT') || sql.startsWith('select')
+      };
+      setMessages(prev => [...prev, botResponse]);
+      setIsTyping(false);
+
+      // Update component with new chart type after data is loaded
+      setTimeout(() => {
+        addComponent(chartType)();
+      }, 500);
+    })
+    .catch(error => {
+      console.error('Error loading query for edit mode:', error);
+      error.query = sql;
+      takeDecision(error);
+      setIsTyping(false);
     });
   };
 
@@ -170,46 +292,141 @@ export default function ChatPopup() {
 
   const addComponent = (type) => () => {
     console.log('Adding component:', type);
-    const component = componentTypes.find(c => c.type === type);
-    console.log('Component found:', component);
-    if (!component) return;
+    const componentType = componentTypes.find(c => c.type === type);
+    console.log('Component found:', componentType);
+    if (!componentType || dashboard.columns.length === 0) return;
+
     const newComponent = {
-      id: Number(new Date().getTime()), 
-        type: type,
-        title: component.defaultTitle,
-        component: component.component,
-        data: dashboard.data,
-        query: dashboard.query || '',
-        columns: dashboard.columns,
-        user_id: sessionStorage.getItem('userId') || '',
+      id: Number(new Date().getTime()),
+      type: type,
+      title: componentType.defaultTitle,
+      component: componentType.component,
+      data: dashboard.data,
+      query: dashboard.query || '',
+      columns: dashboard.columns,
+      isQueryEditable: false,
+      user_id: sessionStorage.getItem('userId') || '',
+      json_config: undefined
     };
-    addComponentState(newComponent);
-    if(newComponent.user_id) {
-            const copyComponent = { ...newComponent };
-            copyComponent.columns = copyComponent.columns.join(',');
-            delete copyComponent.component; 
-            delete copyComponent.data;
-            fetch('/api/dashboard', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(copyComponent),
-            })
-            .then(response => response.json())
-            .then(data => data.dashboard)
-            .then(data => {
-              console.log('New component ID:', data.id, newComponent.id);
-              let components=dashboard.components.filter(comp => comp.id !== newComponent.id);
-              components.unshift({ ...newComponent, id: data.id });
-              console.log('Updated components:', components);
-              setDashboardState({ components });
-              console.log('Component added successfully:', data);
-            })
-            .catch(error => {
-              console.error('Error adding component:', error);
-            });
+
+    console.log('Adding new component:', newComponent);
+
+    // Check if in edit mode - update existing component instead of creating new one
+    if (editableComponentId) {
+      const existingComponent = dashboard.components.find(comp => comp.id === editableComponentId);
+      if (existingComponent) {
+        newComponent.id = editableComponentId;
+        newComponent.isQueryEditable = true;
+
+        // Preserve existing json_config from the old component
+        if (existingComponent.json_config) {
+          // If type changed, clear chart/table specific config
+          if (type !== existingComponent.type) {
+            existingComponent.json_config.chart = undefined;
+            existingComponent.json_config.table = undefined;
           }
+          newComponent.json_config = existingComponent.json_config;
+        }
+
+        // Update component in state
+        const updatedComponents = dashboard.components.map(comp =>
+          comp.id === editableComponentId ? { ...newComponent } : comp
+        );
+        setDashboardState({ components: updatedComponents });
+
+        // Update on server
+        if (newComponent.user_id) {
+          const serverComponent = { ...newComponent };
+          serverComponent.columns = serverComponent.columns.join(',');
+          delete serverComponent.component;
+          delete serverComponent.data;
+
+          // Update json_config with lastModified timestamp
+          if (serverComponent.json_config) {
+            const config = typeof serverComponent.json_config === 'string'
+              ? JSON.parse(serverComponent.json_config)
+              : serverComponent.json_config;
+            config.lastModified = new Date().toISOString();
+            config.updatedFrom = 'chat';
+            serverComponent.json_config = JSON.stringify(config);
+          }
+
+          fetch(`/api/dashboard/${serverComponent.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(serverComponent),
+          })
+          .then(response => response.json())
+          .then(data => {
+            console.log('Component updated on server:', data);
+          })
+          .catch(error => {
+            console.error('Error updating component:', error);
+          });
+        }
+        return;
+      }
+    }
+
+    // Not in edit mode - create new component
+    // First add component to state WITHOUT json_config (like Angular does)
+    addComponentState(newComponent);
+
+    if(newComponent.user_id) {
+      const copyComponent = { ...newComponent };
+      copyComponent.columns = copyComponent.columns.join(',');
+      delete copyComponent.component;
+      delete copyComponent.data;
+
+      // Calculate grid position AFTER adding to state (using NEW length like Angular)
+      const currentComponents = dashboard.components;
+      const index = currentComponents.length;
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+
+      // Prepare json_config with grid layout and metadata
+      copyComponent.json_config = JSON.stringify({
+        grid: {
+          x: col * 6,
+          y: row * 4,
+          w: 6,
+          h: 4
+        },
+        createdAt: new Date().toISOString(),
+        version: '1.0',
+        source: 'chat'
+      });
+
+      fetch('/api/dashboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(copyComponent),
+      })
+      .then(response => response.json())
+      .then(data => data.dashboard)
+      .then(data => {
+        console.log('Component saved to server:', data);
+        // Update the component with server-generated ID and json_config (like Angular line 468-474)
+        const updatedComponent = {
+          ...newComponent,
+          id: data.id,
+          json_config: JSON.parse(copyComponent.json_config)
+        };
+
+        // Remove the temporary component and add the updated one
+        let components = dashboard.components.filter(comp => comp.id !== newComponent.id);
+        components.unshift(updatedComponent);
+        setDashboardState({ components });
+        console.log('Component updated with json_config:', updatedComponent);
+      })
+      .catch(error => {
+        console.error('Error saving component:', error);
+      });
+    }
   }
 
   return (
@@ -255,6 +472,29 @@ export default function ChatPopup() {
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-green-400 rounded-full"></div>
             <h3 className="font-semibold">Chat Support</h3>
+            {/* New Conversation Button */}
+            <button
+              onClick={startNewConversation}
+              className="hover:rounded-lg hover:bg-red-600 p-1 transition-colors"
+              title="New Conversation"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </button>
+            {/* Query Edit Mode Active Indicator */}
+            {hasEditableComponent() && (
+              <button
+                onClick={disableQueryEditMode}
+                className="hover:rounded-lg hover:bg-red-600 p-1 transition-colors"
+                title="Query edit mode is active"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
           </div>
           <button
             onClick={() => setIsOpen(false)}

@@ -17,12 +17,14 @@ export const setState = (newState: Partial<typeof store.state>) => {
 }
 export type SComponent = {
   id: any; // Optional ID for the component
-  type: 'line' | 'bar' | 'pie' | 'table';
+  type: 'line' | 'bar' | 'pie' | 'table' | 'donut';
   title: string;
   query: string;
   data?: any[];
   columns?: string[];
   user_id?: any; // Optional user ID for the component
+  isQueryEditable?: boolean; // Whether the query is editable in chat
+  json_config?: any; // JSON configuration for the component
 }
 
 interface DashboardState {
