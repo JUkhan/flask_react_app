@@ -172,3 +172,5 @@ INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
 -- Order 20
 INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
 (20, 5, 1, 30.00);
+
+INSERT INTO user_gen_core(username, email, created_at) VALUES('testuser', 'testuser@gmail.com', '2024-08-11 12:00:00');

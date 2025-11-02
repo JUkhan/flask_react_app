@@ -53,7 +53,7 @@ class Dashboard(db.Model):
 
 class HelpDesk(db.Model):
     __tablename__ = 'helpdesk_gen_core'
-    title = db.Column(db.Text, primary_key=True)
+    title = db.Column(db.String(255), primary_key=True)
     query_description = db.Column(db.Text, nullable=False)
     query_text = db.Column('query', db.Text, nullable=True) 
     def to_dict(self):
