@@ -1,30 +1,39 @@
-=== SCHEMA: DM_SCHEMA ===
+=== SCHEMA: DBO ===
 
 
 Table: customers
 Description: Represents customers data in the system.
         customer_id (INTEGER, Primary Key)
-        name (VARCHAR)
-        email (VARCHAR)
+        name (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
+        email (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
         registration_date (DATE)
         last_login (DATETIME)
 
 Table: dashboard_gen_core
 Description: Represents dashboard gen core data in the system.
         id (INTEGER, Primary Key)
-        title (VARCHAR(200), Not Null)
-        type (TEXT, Not Null)
-        query (TEXT, Not Null)
-        columns (TEXT, Not Null)
+        title (VARCHAR(200) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        type (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        query (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        columns (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
         created_at (DATETIME)
-        user_id (VARCHAR(80), Not Null)
-        json_config (TEXT)
+        user_id (VARCHAR(80) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        json_config (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
 
 Table: helpdesk_gen_core
 Description: Represents helpdesk gen core data in the system.
-        title (TEXT, Primary Key)
-        query_description (TEXT, Not Null)
-        query (TEXT)
+        title (VARCHAR(255) COLLATE "SQL_Latin1_General_CP1_CI_AS", Primary Key)
+        query_description (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        query (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
+
+Table: MSreplication_options
+Description: Represents MSreplication options data in the system.
+        optname (NVARCHAR(128) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        value (BIT, Not Null)
+        major_version (INTEGER, Not Null)
+        minor_version (INTEGER, Not Null)
+        revision (INTEGER, Not Null)
+        install_failures (INTEGER, Not Null)
 
 Table: order_items
 Description: Represents order items data in the system.
@@ -32,28 +41,78 @@ Description: Represents order items data in the system.
         order_id (INTEGER, Foreign Key -> orders.order_id)
         product_id (INTEGER, Foreign Key -> products.product_id)
         quantity (INTEGER)
-        unit_price (NUMERIC)
+        unit_price (NUMERIC(18, 0))
 
 Table: orders
 Description: Represents orders data in the system.
         order_id (INTEGER, Primary Key)
         customer_id (INTEGER, Foreign Key -> customers.customer_id)
         order_date (DATE)
-        total_amount (NUMERIC)
-        status (VARCHAR)
+        total_amount (NUMERIC(18, 0))
+        status (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
 
 Table: products
 Description: Represents products data in the system.
         product_id (INTEGER, Primary Key)
-        name (VARCHAR)
-        description (TEXT)
-        price (NUMERIC)
-        category (VARCHAR)
+        name (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
+        description (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
+        price (NUMERIC(18, 0))
+        category (VARCHAR COLLATE "SQL_Latin1_General_CP1_CI_AS")
         stock_quantity (INTEGER)
+
+Table: spt_fallback_db
+Description: Represents spt fallback db data in the system.
+        xserver_name (VARCHAR(30) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        xdttm_ins (DATETIME, Not Null)
+        xdttm_last_ins_upd (DATETIME, Not Null)
+        xfallback_dbid (SMALLINT)
+        name (VARCHAR(30) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        dbid (SMALLINT, Not Null)
+        status (SMALLINT, Not Null)
+        version (SMALLINT, Not Null)
+
+Table: spt_fallback_dev
+Description: Represents spt fallback dev data in the system.
+        xserver_name (VARCHAR(30) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        xdttm_ins (DATETIME, Not Null)
+        xdttm_last_ins_upd (DATETIME, Not Null)
+        xfallback_low (INTEGER)
+        xfallback_drive (CHAR(2) COLLATE "SQL_Latin1_General_CP1_CI_AS")
+        low (INTEGER, Not Null)
+        high (INTEGER, Not Null)
+        status (SMALLINT, Not Null)
+        name (VARCHAR(30) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        phyname (VARCHAR(127) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+
+Table: spt_fallback_usg
+Description: Represents spt fallback usg data in the system.
+        xserver_name (VARCHAR(30) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        xdttm_ins (DATETIME, Not Null)
+        xdttm_last_ins_upd (DATETIME, Not Null)
+        xfallback_vstart (INTEGER)
+        dbid (SMALLINT, Not Null)
+        segmap (INTEGER, Not Null)
+        lstart (INTEGER, Not Null)
+        sizepg (INTEGER, Not Null)
+        vstart (INTEGER, Not Null)
+
+Table: spt_monitor
+Description: Represents spt monitor data in the system.
+        lastrun (DATETIME, Not Null)
+        cpu_busy (INTEGER, Not Null)
+        io_busy (INTEGER, Not Null)
+        idle (INTEGER, Not Null)
+        pack_received (INTEGER, Not Null)
+        pack_sent (INTEGER, Not Null)
+        connections (INTEGER, Not Null)
+        pack_errors (INTEGER, Not Null)
+        total_read (INTEGER, Not Null)
+        total_write (INTEGER, Not Null)
+        total_errors (INTEGER, Not Null)
 
 Table: user_gen_core
 Description: Represents user gen core data in the system.
         id (INTEGER, Primary Key)
-        username (VARCHAR(80), Not Null, Unique)
-        email (VARCHAR(120), Not Null, Unique)
+        username (VARCHAR(80) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
+        email (VARCHAR(120) COLLATE "SQL_Latin1_General_CP1_CI_AS", Not Null)
         created_at (DATETIME)

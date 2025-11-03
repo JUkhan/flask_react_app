@@ -20,12 +20,17 @@ class SchemaReader:
     def get_table_info(self, table_name: str) -> Dict:
         """Get detailed information about a table"""
         inspector = inspect(self.db.engine)
-        
+
         # Get columns
         columns = inspector.get_columns(table_name)
         primary_keys = inspector.get_pk_constraint(table_name)['constrained_columns']
         foreign_keys = inspector.get_foreign_keys(table_name)
-        unique_constraints = inspector.get_unique_constraints(table_name)
+
+        # Get unique constraints (not all dialects support this)
+        try:
+            unique_constraints = inspector.get_unique_constraints(table_name)
+        except NotImplementedError:
+            unique_constraints = []
         
         # Process columns
         processed_columns = []
