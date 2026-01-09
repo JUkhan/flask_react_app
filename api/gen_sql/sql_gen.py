@@ -22,11 +22,7 @@ db_system=os.getenv('DB_SYSTEM', 'sqlite')
 class State(TypedDict):
   messages: Annotated[Sequence[BaseMessage], add_messages]
 
-llm = init_chat_model(
-        model="gemini-2.5-flash",
-        temperature=0, 
-        model_provider="google_genai"
-)
+llm = init_chat_model(model="gemini-3-flash-preview", temperature=0, model_provider='google_genai')
 
 @tool
 def get_schema_detail(query_description: str):
@@ -119,6 +115,19 @@ print("Graph nodes:", graph.nodes.keys())
 app = graph.compile(checkpointer=InMemorySaver())
 
 output=''
+def extract_message_content(message):
+    """Extract plain text from message content, handling both string and list formats."""
+    content = message.content
+    if isinstance(content, list):
+        # Extract text from all text blocks (new format with thought signatures)
+        text_parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get('type') == 'text':
+                text_parts.append(block.get('text', ''))
+            elif isinstance(block, str):
+                text_parts.append(block)
+        return ' '.join(text_parts)
+    return content
 def print_stream(stream):
     global output
     for s in stream:
@@ -179,9 +188,9 @@ def get_messages(thread_id):
    
    for msg in messages:
       if isinstance(msg, HumanMessage):
-        res.append({'text':msg.content, 'sender': 'user' })
+        res.append({'text':extract_message_content(msg), 'sender': 'user' })
       else:
-         res.append({'text':extract(msg.content), 'sender': 'bot' })
+         res.append({'text':extract(extract_message_content(msg)), 'sender': 'bot' })
    return res
 
 def run_chatbot(user_input, thread_id):
@@ -203,7 +212,7 @@ def run_chatbot(user_input, thread_id):
     initial_state["messages"].append(user_message)
     response = app.invoke(initial_state, config=config)
     print("len:", len(response["messages"]), 'last content:',response["messages"][-1].content)
-    query = response["messages"][-1].content
+    query = extract_message_content(response["messages"][-1])
     if(isinstance(query, list)):
         return "".join(query)
     return query
