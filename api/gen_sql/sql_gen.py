@@ -42,8 +42,9 @@ def get_schema_detail(query_description: str):
     """)  
                         
   reply = llm.invoke([system_message, human_message])
-  print('TABLES::',reply.content)
-  schema = filter_schemas_by_table_names(reply.content, get_schema())
+  tables = extract_message_content(reply)
+  print('TABLES::',tables)
+  schema = filter_schemas_by_table_names(tables, get_schema())
  
   if not schema:
     return 'Your query description is not sufficient to generate a valid query.'

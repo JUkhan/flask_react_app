@@ -46,5 +46,5 @@ angular/.idea/
 angular/.vscode/*
 angular/.vscode/extensions.json
 angular/.vscode/settings.json
-.env.development.local
-
+api/.env.development.local
+api/.env
